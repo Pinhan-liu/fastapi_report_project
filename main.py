@@ -4,10 +4,19 @@
 #   - 接口3：第3周把关键词规则换成大模型API（LLM意图驱动）
 #   - 接口4：第3周接入真实报告生成
 from fastapi import FastAPI, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import datetime
 
 app = FastAPI()
+
+# 允许前端(React dev server 5173)跨域调用本后端
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://10.63.118.174:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ============ 模拟数据源（第一周跑通链路用，后续换唐苗的CSV） ============
 MOCK_RECORD = {
