@@ -21,8 +21,8 @@ app.add_middleware(
 # ============ 模拟数据源（第一周跑通链路用，后续换唐苗的CSV） ============
 MOCK_RECORD = {
     "timestamp": "2026-09-28 10:00:00",
-    "ap_id": "AP_01",
-    "user_id": "U_01",
+    "ap_id": "AP-01",
+    "user_id": "UE-001",
     "rsrp": -95,
     "sinr": 8.5,
     "throughput": 12.3,
@@ -30,6 +30,7 @@ MOCK_RECORD = {
     "packet_loss": 0.5,
     "prb_usage": 60,
     "scenario": "校园",
+    "network_status": "normal",
 }
 
 
@@ -50,7 +51,7 @@ def data_query(
     record["timestamp"] = start_time
 
     columns = ["timestamp", "ap_id", "user_id", "rsrp", "sinr", "throughput",
-               "latency", "packet_loss", "prb_usage", "scenario"]
+               "latency", "packet_loss", "prb_usage", "scenario", "network_status"]
     if metrics:
         wanted = [m.strip() for m in metrics.split(",")]
         columns = ["timestamp"] + wanted
@@ -92,8 +93,9 @@ def analyze_anomaly(req: AnomalyRequest):
                 {"metric": "rsrp", "avg_value": -108, "threshold": -100, "status": "异常"}
             ],
             "cause": "RSRP持续低于-100dBm，判定为覆盖空洞风险",
-            "suggestion": "建议检查AP_01天线倾角或增加补盲AP",
-            "affected_aps": ["AP_01"]
+            "suggestion": "建议检查AP-01天线倾角或增加补盲AP",
+            "affected_aps": ["AP-01"],
+            "network_status": "weak_coverage"
         }
     }
 
@@ -115,7 +117,7 @@ def agent_chat(req: ChatRequest):
             "code": 0,
             "message": "success",
             "data": {
-                "reply": "检测到网络异常：RSRP均值-108dBm低于正常阈值（-100dBm），吞吐量仅2.3Mbps，判定为覆盖恶化（置信度0.87），建议检查AP_01天线倾角或增加补盲AP。",
+                "reply": "检测到网络异常：RSRP均值-108dBm低于正常阈值（-100dBm），吞吐量仅2.3Mbps，判定为覆盖恶化（置信度0.87），建议检查AP-01天线倾角或增加补盲AP。",
                 "intent": "anomaly_query",
                 "chart": {
                     "type": "line",
