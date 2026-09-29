@@ -22,7 +22,7 @@ Base URL: http://localhost:8000
 
 ## 接口1：查询监测数据
 
-GET /api/data/query?scenario=校园&start_time=2026-09-28 00:00:00&end_time=2026-09-28 23:59:59&ap_id=AP_01&limit=100
+GET /api/data/query?scenario=校园&start_time=2026-09-28 00:00:00&end_time=2026-09-28 23:59:59&ap_id=AP-01&limit=100
 
 可选参数: metrics=rsrp,sinr,throughput（不传则返回全部KPI列）
 
@@ -33,10 +33,10 @@ GET /api/data/query?scenario=校园&start_time=2026-09-28 00:00:00&end_time=2026
   "message": "success",
   "data": {
     "total": 120,
-    "columns": ["timestamp", "ap_id", "user_id", "rsrp", "sinr", "throughput"],
+    "columns": ["timestamp", "ap_id", "user_id", "rsrp", "sinr", "throughput", "network_status"],
     "records": [
-      {"timestamp": "2026-09-28 10:00:00", "ap_id": "AP_01", "user_id": "U_01", "rsrp": -95, "sinr": 8.5, "throughput": 12.3},
-      {"timestamp": "2026-09-28 10:00:05", "ap_id": "AP_01", "user_id": "U_01", "rsrp": -105, "sinr": 3.2, "throughput": 4.1}
+      {"timestamp": "2026-09-28 10:00:00", "ap_id": "AP-01", "user_id": "UE-001", "rsrp": -95, "sinr": 8.5, "throughput": 12.3, "network_status": "normal"},
+      {"timestamp": "2026-09-28 10:00:05", "ap_id": "AP-01", "user_id": "UE-001", "rsrp": -105, "sinr": 3.2, "throughput": 4.1, "network_status": "congestion"}
     ]
   }
 }
@@ -68,9 +68,10 @@ POST /api/analyze/anomaly
       {"metric": "rsrp", "avg_value": -108, "threshold": -100, "status": "异常"},
       {"metric": "throughput", "avg_value": 2.3, "threshold": 10, "status": "异常"}
     ],
-    "cause": "AP_01覆盖范围内用户RSRP持续低于-100dBm，SINR同步恶化，判定为覆盖空洞风险",
-    "suggestion": "建议检查AP_01天线倾角或增加补盲AP",
-    "affected_aps": ["AP_01", "AP_02"]
+    "cause": "AP-01覆盖范围内用户RSRP持续低于-100dBm，SINR同步恶化，判定为覆盖空洞风险",
+    "suggestion": "建议检查AP-01天线倾角或增加补盲AP",
+    "affected_aps": ["AP-01", "AP-02"],
+    "network_status": "weak_coverage"
   }
 }
 
@@ -92,7 +93,7 @@ POST /api/agent/chat
   "code": 0,
   "message": "success",
   "data": {
-    "reply": "10:00-10:10时段检测到异常：RSRP均值-108dBm低于正常阈值，吞吐量仅2.3Mbps，判定为覆盖恶化（置信度0.87），建议检查AP_01天线。",
+    "reply": "10:00-10:10时段检测到异常：RSRP均值-108dBm低于正常阈值，吞吐量仅2.3Mbps，判定为覆盖恶化（置信度0.87），建议检查AP-01天线。",
     "intent": "anomaly_query",
     "chart": {
       "type": "line",
