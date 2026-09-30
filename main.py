@@ -100,102 +100,160 @@ class AnomalyRequest(BaseModel):
     metrics: list[str] = ["rsrp", "sinr", "throughput"]
 
 
+def judge_ap(ap, ap_rows):
+    """对单个AP做多KPI联合研判（通信规则 + 状态标签占比），返回研判结果dict"""
+    rsrp_avg = avg(ap_rows, "rsrp")
+    sinr_avg = avg(ap_rows, "sinr")
+    thr_avg = avg(ap_rows, "throughput")
+    prb_avg = avg(ap_rows, "prb_usage")
+    pkt_avg = avg(ap_rows, "packet_loss")
+
+    # 该AP窗口内的状态标签占比（唐苗数据已标注）
+    st = {}
+    for r in ap_rows:
+        st[r["network_status"]] = st.get(r["network_status"], 0) + 1
+    weak_ratio = st.get("weak_coverage", 0) / len(ap_rows)
+    cong_ratio = st.get("congestion", 0) / len(ap_rows)
+
+    # 逐KPI对照通信阈值，构建证据链
+    evidence = []
+    if rsrp_avg < -105:
+        evidence.append({"metric": "rsrp", "avg_value": round(rsrp_avg, 2), "threshold": -105, "status": "异常"})
+    if sinr_avg < 5:
+        evidence.append({"metric": "sinr", "avg_value": round(sinr_avg, 2), "threshold": 5, "status": "异常"})
+    if prb_avg > 90:
+        evidence.append({"metric": "prb_usage", "avg_value": round(prb_avg, 2), "threshold": 90, "status": "异常"})
+    if pkt_avg > 5:
+        evidence.append({"metric": "packet_loss", "avg_value": round(pkt_avg, 2), "threshold": 5, "status": "异常"})
+
+    base = {
+        "ap_id": ap,
+        "rsrp_avg": round(rsrp_avg, 1), "sinr_avg": round(sinr_avg, 1),
+        "thr_avg": round(thr_avg, 1), "prb_avg": round(prb_avg, 1),
+        "weak_ratio": round(weak_ratio, 3), "cong_ratio": round(cong_ratio, 3),
+        "evidence": evidence,
+    }
+
+    # 规则优先级：覆盖故障 > 网络拥塞 > 边缘弱用户
+    if weak_ratio > 0.3 or (rsrp_avg < -105 and sinr_avg < 5):
+        level = "严重" if weak_ratio > 0.5 else "中等"
+        return {**base, "anomaly_type": "覆盖故障", "level": level, "network_status": "weak_coverage",
+                "cause": f"{ap}弱覆盖采样占比{weak_ratio*100:.0f}%、RSRP均值{rsrp_avg:.1f}dBm，判定为覆盖空洞",
+                "suggestion": "建议检查AP天线倾角/功率或增加补盲AP"}
+    if cong_ratio > 0.25 or prb_avg > 90:
+        level = "严重" if cong_ratio > 0.5 else "中等"
+        return {**base, "anomaly_type": "网络拥塞", "level": level, "network_status": "congestion",
+                "cause": f"{ap}拥塞采样占比{cong_ratio*100:.0f}%、PRB利用率均值{prb_avg:.1f}%，判定为容量拥塞",
+                "suggestion": "建议负载均衡或扩容"}
+    if thr_avg < 50:
+        return {**base, "anomaly_type": "边缘弱用户", "level": "中等", "network_status": "weak_coverage",
+                "cause": f"{ap}吞吐量均值{thr_avg:.1f}Mbps偏低、SINR均值{sinr_avg:.1f}dB，判定为边缘弱用户",
+                "suggestion": "建议用户靠近信号源或调整波束"}
+
+    return {**base, "anomaly_type": "正常", "level": "低", "network_status": "normal",
+            "cause": f"{ap}各项指标均在正常范围", "suggestion": "无需处理"}
+
+
 @app.post("/api/analyze/anomaly")
 def analyze_anomaly(req: AnomalyRequest):
-    # 第2周版：基于CSV真实数据，按AP分组多KPI联合研判（可解释证据链）
+    # 第2周深化版：CSV真实数据，按AP分组多KPI联合研判（可解释证据链）
+    # 新增：hourly_trend 小时趋势 / ap_comparison 多AP对比 / alarm_history 告警历史
     rows = filter_rows(req.scenario, req.window_start, req.window_end)
     if not rows:
         return {"code": 0, "message": "success",
-                "data": {"is_anomaly": False, "reason": "该时间窗口无数据"}}
+                "data": {"is_anomaly": False, "reason": "该时间窗口无数据",
+                         "hourly_trend": [], "ap_comparison": [], "alarm_history": []}}
 
-    # 按 AP 分组：研判粒度到接入点，避免全天聚合抹平异常
+    sev_rank = {"严重": 0, "中等": 1, "低": 9}
+
+    # 1) 按 AP 分组研判 → 主结果
     by_ap = {}
     for r in rows:
         by_ap.setdefault(r["ap_id"], []).append(r)
+    ap_results = [judge_ap(ap, ap_rows) for ap, ap_rows in sorted(by_ap.items())]
+    findings = [res for res in ap_results if res["anomaly_type"] != "正常"]
 
-    findings = []  # (ap, type, level, nstatus, cause, suggestion, evidence, severity)
-    for ap, ap_rows in by_ap.items():
-        rsrp_avg = avg(ap_rows, "rsrp")
-        sinr_avg = avg(ap_rows, "sinr")
-        thr_avg = avg(ap_rows, "throughput")
-        prb_avg = avg(ap_rows, "prb_usage")
-        pkt_avg = avg(ap_rows, "packet_loss")
-
-        # 该AP窗口内的状态标签占比（唐苗数据已标注）
-        st = {}
-        for r in ap_rows:
-            st[r["network_status"]] = st.get(r["network_status"], 0) + 1
-        weak_ratio = st.get("weak_coverage", 0) / len(ap_rows)
-        cong_ratio = st.get("congestion", 0) / len(ap_rows)
-
-        # 逐KPI对照通信阈值，构建证据链
+    if findings:
+        findings.sort(key=lambda f: sev_rank.get(f["level"], 9))
+        m = findings[0]
+        is_anomaly, anomaly_type, level = True, m["anomaly_type"], m["level"]
+        evidence, cause, suggestion = m["evidence"], m["cause"], m["suggestion"]
+        nstatus, affected_aps = m["network_status"], [f["ap_id"] for f in findings]
+        confidence = round(min(0.99, 0.6 + 0.08 * len(evidence) + (0.1 if len(findings) > 1 else 0)), 2)
+    else:
+        rsrp_avg = avg(rows, "rsrp"); sinr_avg = avg(rows, "sinr")
+        thr_avg = avg(rows, "throughput"); prb_avg = avg(rows, "prb_usage")
+        is_anomaly, anomaly_type, level = False, "正常", "低"
         evidence = []
-        if rsrp_avg < -105:
-            evidence.append({"metric": "rsrp", "avg_value": round(rsrp_avg, 2), "threshold": -105, "status": "异常"})
-        if sinr_avg < 5:
-            evidence.append({"metric": "sinr", "avg_value": round(sinr_avg, 2), "threshold": 5, "status": "异常"})
-        if prb_avg > 90:
-            evidence.append({"metric": "prb_usage", "avg_value": round(prb_avg, 2), "threshold": 90, "status": "异常"})
-        if pkt_avg > 5:
-            evidence.append({"metric": "packet_loss", "avg_value": round(pkt_avg, 2), "threshold": 5, "status": "异常"})
+        cause = (f"各AP的RSRP均值{rsrp_avg:.1f}dBm、SINR均值{sinr_avg:.1f}dB、PRB利用率{prb_avg:.1f}%、"
+                 f"吞吐量均值{thr_avg:.1f}Mbps，各项指标均在正常范围")
+        suggestion, nstatus, affected_aps = "无需处理", "normal", []
+        confidence = 0.95
 
-        # 规则优先级：覆盖故障 > 网络拥塞 > 边缘弱用户
-        if weak_ratio > 0.3 or (rsrp_avg < -105 and sinr_avg < 5):
-            level = "严重" if weak_ratio > 0.5 else "中等"
-            findings.append((ap, "覆盖故障", level, "weak_coverage",
-                             f"{ap}弱覆盖采样占比{weak_ratio*100:.0f}%、RSRP均值{rsrp_avg:.1f}dBm，判定为覆盖空洞",
-                             "建议检查AP天线倾角/功率或增加补盲AP", evidence, level))
-        elif cong_ratio > 0.25 or prb_avg > 90:
-            level = "严重" if cong_ratio > 0.5 else "中等"
-            findings.append((ap, "网络拥塞", level, "congestion",
-                             f"{ap}拥塞采样占比{cong_ratio*100:.0f}%、PRB利用率均值{prb_avg:.1f}%，判定为容量拥塞",
-                             "建议负载均衡或扩容", evidence, level))
-        elif thr_avg < 50:
-            findings.append((ap, "边缘弱用户", "中等", "weak_coverage",
-                             f"{ap}吞吐量均值{thr_avg:.1f}Mbps偏低、SINR均值{sinr_avg:.1f}dB，判定为边缘弱用户",
-                             "建议用户靠近信号源或调整波束", evidence, "中等"))
+    # 2) 按小时切片 → 趋势（回答"什么时候开始变差的"）
+    by_hour = {}
+    for r in rows:
+        by_hour.setdefault(r["timestamp"][:13], []).append(r)  # "2026-01-01 10"
 
-    if not findings:
-        # 无异常：返回总体概况
-        rsrp_avg = avg(rows, "rsrp")
-        sinr_avg = avg(rows, "sinr")
-        thr_avg = avg(rows, "throughput")
-        prb_avg = avg(rows, "prb_usage")
-        return {
-            "code": 0,
-            "message": "success",
-            "data": {
-                "is_anomaly": False,
-                "anomaly_type": "正常",
-                "level": "低",
-                "confidence": 0.95,
-                "kpi_evidence": [],
-                "cause": (f"各AP的RSRP均值{rsrp_avg:.1f}dBm、SINR均值{sinr_avg:.1f}dB、PRB利用率{prb_avg:.1f}%、"
-                          f"吞吐量均值{thr_avg:.1f}Mbps，各项指标均在正常范围"),
-                "suggestion": "无需处理",
-                "affected_aps": [],
-                "network_status": "normal",
-            },
-        }
+    hourly_trend = []
+    for hour in sorted(by_hour):
+        hour_by_ap = {}
+        for r in by_hour[hour]:
+            hour_by_ap.setdefault(r["ap_id"], []).append(r)
+        hour_res = [judge_ap(ap, ap_rows) for ap, ap_rows in hour_by_ap.items()]
+        hour_findings = [x for x in hour_res if x["anomaly_type"] != "正常"]
+        if hour_findings:
+            hour_findings.sort(key=lambda f: sev_rank.get(f["level"], 9))
+            top = hour_findings[0]
+        else:
+            top = hour_res[0]
+        hourly_trend.append({
+            "hour": hour,
+            "anomaly_type": top["anomaly_type"], "level": top["level"],
+            "network_status": top["network_status"],
+            "rsrp_avg": top["rsrp_avg"], "sinr_avg": top["sinr_avg"],
+            "thr_avg": top["thr_avg"], "prb_avg": top["prb_avg"],
+        })
 
-    # 主结果取严重程度最高的AP；affected_aps 列全部异常AP
-    sev_rank = {"严重": 0, "中等": 1}
-    findings.sort(key=lambda f: sev_rank.get(f[2], 9))
-    ap, anomaly_type, level, nstatus, cause, suggestion, evidence, _ = findings[0]
+    # 3) 多 AP 横向对比（哪台AP最差）
+    ap_comparison = [
+        {k: res[k] for k in ("ap_id", "rsrp_avg", "sinr_avg", "thr_avg", "prb_avg",
+                             "weak_ratio", "cong_ratio", "anomaly_type", "level")}
+        for res in ap_results
+    ]
+
+    # 4) 告警历史：小时×AP 命中异常（按时间倒序）
+    alarm_history = []
+    for hour in sorted(by_hour, reverse=True):
+        hour_by_ap = {}
+        for r in by_hour[hour]:
+            hour_by_ap.setdefault(r["ap_id"], []).append(r)
+        for ap, ap_rows in hour_by_ap.items():
+            res = judge_ap(ap, ap_rows)
+            if res["anomaly_type"] != "正常":
+                alarm_history.append({
+                    "time": hour, "ap_id": ap,
+                    "anomaly_type": res["anomaly_type"], "level": res["level"],
+                    "cause": res["cause"],
+                })
+    alarm_history = alarm_history[:50]
 
     return {
         "code": 0,
         "message": "success",
         "data": {
-            "is_anomaly": True,
+            "is_anomaly": is_anomaly,
             "anomaly_type": anomaly_type,
             "level": level,
-            "confidence": round(min(0.99, 0.6 + 0.08 * len(evidence) + (0.1 if len(findings) > 1 else 0)), 2),
+            "confidence": confidence,
             "kpi_evidence": evidence,
             "cause": cause,
             "suggestion": suggestion,
-            "affected_aps": [f[0] for f in findings],
+            "affected_aps": affected_aps,
             "network_status": nstatus,
+            "hourly_trend": hourly_trend,        # 新增：小时级趋势
+            "ap_comparison": ap_comparison,      # 新增：多AP横向对比
+            "alarm_history": alarm_history,      # 新增：告警历史
         },
     }
 
