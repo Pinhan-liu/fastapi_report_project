@@ -6,8 +6,9 @@ import os
 import re
 import requests
 
-# ===== 大模型配置（优先读环境变量；临时测试可把 key 填在下一行）=====
-LLM_API_KEY = os.getenv("LLM_API_KEY", "sk-在这里填你的Key")
+# ===== 大模型配置（⚠️ 安全：key 一律走环境变量，禁止写入代码/提交仓库）=====
+# 永久设置一次（新开终端即生效）：setx LLM_API_KEY "sk-你的真实key"
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
 # DeepSeek / 豆包 / OpenAI 兼容接口都行，改 URL 和模型名即可
 LLM_URL = os.getenv("LLM_URL", "https://api.deepseek.com/chat/completions")
 LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
@@ -15,7 +16,7 @@ LLM_MODEL = os.getenv("LLM_MODEL", "deepseek-chat")
 SYSTEM_PROMPT = """你是无线网络监测平台的意图解析器。用户输入一句关于网络监测的自然语言，请判断意图并提取参数，只输出一个 JSON，不要输出任何其他文字：
 {"intent": "query_kpi | fault_diagnosis | get_heatmap | get_topology | chat", "params": {...}}
 - query_kpi：查KPI数据。params 含 scenario、metric(rsrp/sinr/throughput)、time_range(如"最近1小时")
-- fault_diagnosis：故障研判。params 含 scenario、time_range
+- fault_diagnosis：故障研判。params 含 scenario、time_range。用户询问网络体验/质量/好坏/是否正常/分析原因/拥塞/信号差等问题时，优先选本意图
 - get_heatmap：热力图。params 含 scenario、metric(默认rsrp)
 - get_topology：网络拓扑。params 含 scenario
 - chat：闲聊/无法判断。params 含 reply(你的简短回答)
@@ -61,15 +62,22 @@ def parse_intent(text: str) -> dict:
 
 
 def rule_intent(message: str) -> dict:
-    """关键词规则版（fallback：LLM 挂了/超时/输出乱时用，保住核心链路可用）"""
-    anomaly_keywords = ["异常", "问题", "故障", "卡", "不好", "差", "掉线", "信号弱", "网络"]
+    """关键词规则版（fallback：LLM 挂了/超时/输出乱时用，保住核心链路可用）
+    第2周升级：①场景关键词提取（校园/商场/体育馆）②研判/热力/拓扑关键词扩充，
+    让降级结果从"答非所问"变为"基本答对"。"""
+    # ① 提取场景（与 CSV 场景一致），用户没提场景则为空 → 上层回退默认
+    scenario = next((s for s in ("校园", "商场", "体育馆") if s in message), None)
+    params = {"scenario": scenario} if scenario else {}
+    # ② 意图关键词（与 LLM prompt 的研判倾向对齐；"信号/稳定/怎么样/什么情况/看看/拥塞/弱"也并入研判）
+    anomaly_keywords = ["异常", "问题", "故障", "卡", "不好", "差", "掉线", "信号", "网络",
+                        "体验", "质量", "稳定", "怎么样", "什么情况", "看看", "拥塞", "弱"]
     if any(k in message for k in anomaly_keywords):
-        return {"intent": "fault_diagnosis", "params": {}}
-    if "热力" in message or "地图" in message or "覆盖" in message:
-        return {"intent": "get_heatmap", "params": {}}
-    if "拓扑" in message or "基站" in message or "AP" in message:
-        return {"intent": "get_topology", "params": {}}
-    return {"intent": "query_kpi", "params": {}}
+        return {"intent": "fault_diagnosis", "params": params}
+    if "热力" in message or "地图" in message or "覆盖" in message or "信号分布" in message:
+        return {"intent": "get_heatmap", "params": params}
+    if "拓扑" in message or "基站" in message or "AP" in message or "连接关系" in message:
+        return {"intent": "get_topology", "params": params}
+    return {"intent": "query_kpi", "params": params}
 
 
 def get_intent(message: str) -> dict:
