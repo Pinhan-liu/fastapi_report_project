@@ -1,7 +1,7 @@
 # main.py —— AI-NetTune 后端：4个接口（第2周版：已接入唐苗仿真数据集）
 # 数据源：data/network_data.csv（12960条，11列，含 network_status）
 #   - 接口1/接口2：已从 mock 切换为 CSV 真实查询 + 多KPI规则研判
-#   - 接口3：规则版意图识别（第3周换大模型API）
+#   - 接口3：LLM 意图解析 + 工具编排
 #   - 接口4：报告生成占位（第3周接入真实生成）
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -165,6 +165,7 @@ def analyze_anomaly(req: AnomalyRequest):
     if not rows:
         return {"code": 0, "message": "success",
                 "data": {"is_anomaly": False, "reason": "该时间窗口无数据",
+                         "cause": "该时间窗口无数据",
                          "hourly_trend": [], "ap_comparison": [], "alarm_history": []}}
 
     sev_rank = {"严重": 0, "中等": 1, "低": 9}
@@ -275,6 +276,9 @@ def agent_chat(req: ChatRequest):
     intent = intent_obj.get("intent", "query_kpi")
     params = intent_obj.get("params", {})
     scenario = params.get("scenario") or req.scenario
+    # 场景白名单校验：LLM 可能把"A区"之类当成场景，无效则回退请求默认场景
+    if scenario not in ("校园", "商场", "体育馆"):
+        scenario = req.scenario
     win_start, win_end = "2026-01-01 00:00:00", "2026-01-01 23:59:59"
 
     # ① 故障研判：意图 → 确定性工具（接口2），LLM 不参与计算（规避幻觉）
@@ -285,7 +289,7 @@ def agent_chat(req: ChatRequest):
         if d.get("is_anomaly"):
             reply = f"检测到{d['anomaly_type']}（{d['level']}）：{d['cause']}。建议：{d['suggestion']}。"
         else:
-            reply = f"当前时段未发现明显异常：{d['cause']}。"
+            reply = f"当前时段未发现明显异常：{d.get('cause', d.get('reason', '暂无数据'))}。"
         chart = {
             "type": "line",
             "option": {
