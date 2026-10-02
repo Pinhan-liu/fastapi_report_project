@@ -11,6 +11,9 @@ import csv as _csv
 import statistics
 from pathlib import Path
 
+import llm_agent
+from llm_agent import get_intent
+
 app = FastAPI()
 
 # 允许前端(React dev server 5173)跨域调用本后端
@@ -267,60 +270,62 @@ class ChatRequest(BaseModel):
 
 @app.post("/api/agent/chat")
 def agent_chat(req: ChatRequest):
-    # 第2周：规则版意图识别（演示"意图驱动"雏形；第3周换成大模型API）
-    # 数据窗口默认取 CSV 第一天（2026-01-01）
+    # 第2周升级版：LLM 意图解析 + 工具编排；LLM 不可用时自动降级关键词规则版
+    intent_obj = get_intent(req.message)
+    intent = intent_obj.get("intent", "query_kpi")
+    params = intent_obj.get("params", {})
+    scenario = params.get("scenario") or req.scenario
     win_start, win_end = "2026-01-01 00:00:00", "2026-01-01 23:59:59"
 
-    # 命中异常关键词 → 判为异常查询意图，返回真实研判结论 + 真实折线数据
-    anomaly_keywords = ["异常", "问题", "故障", "卡", "不好", "差", "掉线", "信号弱", "网络"]
-    if any(k in req.message for k in anomaly_keywords):
-        an = analyze_anomaly(AnomalyRequest(scenario=req.scenario,
+    # ① 故障研判：意图 → 确定性工具（接口2），LLM 不参与计算（规避幻觉）
+    if intent == "fault_diagnosis":
+        an = analyze_anomaly(AnomalyRequest(scenario=scenario,
                                             window_start=win_start, window_end=win_end))
         d = an["data"]
-        rows = filter_rows(req.scenario, win_start, win_end)[:60]
-        times = [r["timestamp"][11:16] for r in rows]
-        rsrp_series = [round(float(r["rsrp"]), 1) for r in rows]
-
         if d.get("is_anomaly"):
             reply = f"检测到{d['anomaly_type']}（{d['level']}）：{d['cause']}。建议：{d['suggestion']}。"
         else:
             reply = f"当前时段未发现明显异常：{d['cause']}。"
-
+        chart = {
+            "type": "line",
+            "option": {
+                "xAxis": {"data": [h["hour"] for h in d["hourly_trend"]]},
+                "series": [{"name": "RSRP(dBm)", "data": [h["rsrp_avg"] for h in d["hourly_trend"]]}],
+            },
+        }
         return {
-            "code": 0,
-            "message": "success",
+            "code": 0, "message": "success",
             "data": {
-                "reply": reply,
-                "intent": "anomaly_query",
-                "chart": {
-                    "type": "line",
-                    "option": {
-                        "xAxis": {"data": times},
-                        "series": [{"name": "RSRP(dBm)", "data": rsrp_series}],
-                    },
-                },
-                "query_ref": {"scenario": req.scenario,
-                              "start_time": win_start, "end_time": win_end},
+                "reply": reply, "intent": "fault_diagnosis", "chart": chart,
+                "detail": d, "query_ref": {"scenario": scenario,
+                                           "start_time": win_start, "end_time": win_end},
             },
         }
 
-    # 默认：普通数据查询意图 → 返回真实均值概况
-    rows = filter_rows(req.scenario, win_start, win_end)
+    # ② 热力图/拓扑：等唐苗数据接口接入后再替换为真实调用，先占位
+    if intent in ("get_heatmap", "get_topology"):
+        return {
+            "code": 0, "message": "success",
+            "data": {
+                "reply": "该功能正在接入数据接口，暂用基础数据演示。",
+                "intent": intent, "chart": None, "query_ref": {"scenario": scenario},
+            },
+        }
+
+    # ③ 默认 query_kpi：返回真实均值概况
+    rows = filter_rows(scenario, win_start, win_end)
     if rows:
         reply = (f"当前时段网络整体运行平稳：RSRP均值{avg(rows,'rsrp'):.1f}dBm，"
                  f"SINR均值{avg(rows,'sinr'):.1f}dB，平均吞吐量{avg(rows,'throughput'):.1f}Mbps，"
                  f"PRB利用率{avg(rows,'prb_usage'):.1f}%，共{len(rows)}条采样。")
     else:
-        reply = f"未找到场景「{req.scenario}」在所选时段的数据。"
+        reply = f"未找到场景「{scenario}」在所选时段的数据。"
 
     return {
-        "code": 0,
-        "message": "success",
+        "code": 0, "message": "success",
         "data": {
-            "reply": reply,
-            "intent": "general_query",
-            "chart": None,
-            "query_ref": {"scenario": req.scenario},
+            "reply": reply, "intent": "query_kpi", "chart": None,
+            "query_ref": {"scenario": scenario},
         },
     }
 
