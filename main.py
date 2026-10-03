@@ -1,5 +1,5 @@
-# main.py —— AI-NetTune 后端：4个接口（第2周版：已接入唐苗仿真数据集）
-# 数据源：data/network_data.csv（12960条，11列，含 network_status）
+# main.py —— AI-NetTune 后端：4个接口（第2周版：已接入唐苗仿真数据集 v2.3）
+# 数据源：data/network_data.csv（12960条，18列，含坐标/network_status/3个辅助字段）
 #   - 接口1/接口2：已从 mock 切换为 CSV 真实查询 + 多KPI规则研判
 #   - 接口3：LLM 意图解析 + 工具编排
 #   - 接口4：报告生成占位（第3周接入真实生成）
@@ -24,7 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ============ 数据源：唐苗仿真数据集（12960条） ============
+# ============ 数据源：唐苗仿真数据集（12960条，18列） ============
 # 注意：表头首列带 BOM（\ufefftimestamp），必须用 utf-8-sig 读取
 DATA_PATH = Path(__file__).resolve().parent / "data" / "network_data.csv"
 
@@ -37,8 +37,11 @@ def load_data():
 
 DF = load_data()
 
-ALL_COLUMNS = ["timestamp", "ap_id", "user_id", "rsrp", "sinr", "throughput",
-               "latency", "packet_loss", "prb_usage", "scenario", "network_status"]
+# 完整 18 列：11 核心 KPI + AP/UE 坐标（4列）+ 故障深度分析辅助字段（3列）
+ALL_COLUMNS = ["timestamp", "ap_id", "ap_x", "ap_y", "user_id", "ue_x", "ue_y",
+               "rsrp", "sinr", "throughput", "latency", "packet_loss", "prb_usage",
+               "scenario", "network_status",
+               "retransmission_count", "traffic_demand", "active_users"]
 
 
 def filter_rows(scenario, start_time, end_time, ap_id=None, user_id=None):
@@ -70,7 +73,7 @@ def avg(rows, key):
 def data_query(
     scenario: str = Query(..., description="场景，如：校园"),
     start_time: str = Query("2026-01-01 00:00:00", description="开始时间"),
-    end_time: str = Query("2026-01-02 23:59:59", description="结束时间"),
+    end_time: str = Query("2026-01-03 23:59:59", description="结束时间"),
     ap_id: str | None = Query(None, description="AP编号，不传查全部"),
     user_id: str | None = Query(None, description="用户编号，不传查全部"),
     metrics: str | None = Query(None, description="要返回的KPI列，逗号分隔，如 rsrp,sinr；不传返回全部"),
@@ -177,35 +180,20 @@ def analyze_anomaly(req: AnomalyRequest):
     ap_results = [judge_ap(ap, ap_rows) for ap, ap_rows in sorted(by_ap.items())]
     findings = [res for res in ap_results if res["anomaly_type"] != "正常"]
 
-    if findings:
-        findings.sort(key=lambda f: sev_rank.get(f["level"], 9))
-        m = findings[0]
-        is_anomaly, anomaly_type, level = True, m["anomaly_type"], m["level"]
-        evidence, cause, suggestion = m["evidence"], m["cause"], m["suggestion"]
-        nstatus, affected_aps = m["network_status"], [f["ap_id"] for f in findings]
-        confidence = round(min(0.99, 0.6 + 0.08 * len(evidence) + (0.1 if len(findings) > 1 else 0)), 2)
-    else:
-        rsrp_avg = avg(rows, "rsrp"); sinr_avg = avg(rows, "sinr")
-        thr_avg = avg(rows, "throughput"); prb_avg = avg(rows, "prb_usage")
-        is_anomaly, anomaly_type, level = False, "正常", "低"
-        evidence = []
-        cause = (f"各AP的RSRP均值{rsrp_avg:.1f}dBm、SINR均值{sinr_avg:.1f}dB、PRB利用率{prb_avg:.1f}%、"
-                 f"吞吐量均值{thr_avg:.1f}Mbps，各项指标均在正常范围")
-        suggestion, nstatus, affected_aps = "无需处理", "normal", []
-        confidence = 0.95
-
-    # 2) 按小时切片 → 趋势（回答"什么时候开始变差的"）
+    # 2) 按小时切片 → 趋势 + 时段级异常（回答"什么时候开始变差的"）
     by_hour = {}
     for r in rows:
         by_hour.setdefault(r["timestamp"][:13], []).append(r)  # "2026-01-01 10"
 
     hourly_trend = []
+    hour_findings_all = []
     for hour in sorted(by_hour):
         hour_by_ap = {}
         for r in by_hour[hour]:
             hour_by_ap.setdefault(r["ap_id"], []).append(r)
         hour_res = [judge_ap(ap, ap_rows) for ap, ap_rows in hour_by_ap.items()]
         hour_findings = [x for x in hour_res if x["anomaly_type"] != "正常"]
+        hour_findings_all.extend(hour_findings)
         if hour_findings:
             hour_findings.sort(key=lambda f: sev_rank.get(f["level"], 9))
             top = hour_findings[0]
@@ -218,6 +206,32 @@ def analyze_anomaly(req: AnomalyRequest):
             "rsrp_avg": top["rsrp_avg"], "sinr_avg": top["sinr_avg"],
             "thr_avg": top["thr_avg"], "prb_avg": top["prb_avg"],
         })
+
+    if findings:
+        findings.sort(key=lambda f: sev_rank.get(f["level"], 9))
+        m = findings[0]
+        is_anomaly, anomaly_type, level = True, m["anomaly_type"], m["level"]
+        evidence, cause, suggestion = m["evidence"], m["cause"], m["suggestion"]
+        nstatus, affected_aps = m["network_status"], [f["ap_id"] for f in findings]
+        confidence = round(min(0.99, 0.6 + 0.08 * len(evidence) + (0.1 if len(findings) > 1 else 0)), 2)
+    elif hour_findings_all:
+        # 整窗均值被正常时段稀释判"正常"，但存在时段性异常（小时级）
+        # → 主结果升级为最严重的小时异常，避免"有告警却说正常"的矛盾
+        hour_findings_all.sort(key=lambda f: sev_rank.get(f["level"], 9))
+        m = hour_findings_all[0]
+        is_anomaly, anomaly_type, level = True, m["anomaly_type"], m["level"]
+        evidence, cause, suggestion = m["evidence"], m["cause"], m["suggestion"]
+        nstatus, affected_aps = m["network_status"], [m["ap_id"]]
+        confidence = round(min(0.99, 0.6 + 0.08 * len(evidence) + 0.1), 2)
+    else:
+        rsrp_avg = avg(rows, "rsrp"); sinr_avg = avg(rows, "sinr")
+        thr_avg = avg(rows, "throughput"); prb_avg = avg(rows, "prb_usage")
+        is_anomaly, anomaly_type, level = False, "正常", "低"
+        evidence = []
+        cause = (f"各AP的RSRP均值{rsrp_avg:.1f}dBm、SINR均值{sinr_avg:.1f}dB、PRB利用率{prb_avg:.1f}%、"
+                 f"吞吐量均值{thr_avg:.1f}Mbps，各项指标均在正常范围")
+        suggestion, nstatus, affected_aps = "无需处理", "normal", []
+        confidence = 0.95
 
     # 3) 多 AP 横向对比（哪台AP最差）
     ap_comparison = [
@@ -262,61 +276,24 @@ def analyze_anomaly(req: AnomalyRequest):
     }
 
 
-# ============ 接口3：自然语言对话 ============
+# ============ 接口3：自然语言对话（LLM 意图 → Function Calling 工具注册表分发） ============
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "sess_001"
     scenario: str = "校园"
 
 
-@app.post("/api/agent/chat")
-def agent_chat(req: ChatRequest):
-    # 第2周升级版：LLM 意图解析 + 工具编排；LLM 不可用时自动降级关键词规则版
-    intent_obj = get_intent(req.message)
-    intent = intent_obj.get("intent", "query_kpi")
-    params = intent_obj.get("params", {})
-    scenario = params.get("scenario") or req.scenario
-    # 场景白名单校验：LLM 可能把"A区"之类当成场景，无效则回退请求默认场景
-    if scenario not in ("校园", "商场", "体育馆"):
-        scenario = req.scenario
-    win_start, win_end = "2026-01-01 00:00:00", "2026-01-01 23:59:59"
+VALID_SCENARIOS = ("校园", "商场", "体育馆")
 
-    # ① 故障研判：意图 → 确定性工具（接口2），LLM 不参与计算（规避幻觉）
-    if intent == "fault_diagnosis":
-        an = analyze_anomaly(AnomalyRequest(scenario=scenario,
-                                            window_start=win_start, window_end=win_end))
-        d = an["data"]
-        if d.get("is_anomaly"):
-            reply = f"检测到{d['anomaly_type']}（{d['level']}）：{d['cause']}。建议：{d['suggestion']}。"
-        else:
-            reply = f"当前时段未发现明显异常：{d.get('cause', d.get('reason', '暂无数据'))}。"
-        chart = {
-            "type": "line",
-            "option": {
-                "xAxis": {"data": [h["hour"] for h in d["hourly_trend"]]},
-                "series": [{"name": "RSRP(dBm)", "data": [h["rsrp_avg"] for h in d["hourly_trend"]]}],
-            },
-        }
-        return {
-            "code": 0, "message": "success",
-            "data": {
-                "reply": reply, "intent": "fault_diagnosis", "chart": chart,
-                "detail": d, "query_ref": {"scenario": scenario,
-                                           "start_time": win_start, "end_time": win_end},
-            },
-        }
 
-    # ② 热力图/拓扑：等唐苗数据接口接入后再替换为真实调用，先占位
-    if intent in ("get_heatmap", "get_topology"):
-        return {
-            "code": 0, "message": "success",
-            "data": {
-                "reply": "该功能正在接入数据接口，暂用基础数据演示。",
-                "intent": intent, "chart": None, "query_ref": {"scenario": scenario},
-            },
-        }
+def resolve_scenario(params_scenario, default_scenario):
+    """场景白名单校验：LLM 可能把"A区"之类当成场景，无效则回退请求默认场景"""
+    return params_scenario if params_scenario in VALID_SCENARIOS else default_scenario
 
-    # ③ 默认 query_kpi：返回真实均值概况
+
+# ---- 工具1：KPI 概况查询（真实 CSV 均值） ----
+def tool_query_kpi(scenario: str) -> dict:
+    win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
     rows = filter_rows(scenario, win_start, win_end)
     if rows:
         reply = (f"当前时段网络整体运行平稳：RSRP均值{avg(rows,'rsrp'):.1f}dBm，"
@@ -324,14 +301,82 @@ def agent_chat(req: ChatRequest):
                  f"PRB利用率{avg(rows,'prb_usage'):.1f}%，共{len(rows)}条采样。")
     else:
         reply = f"未找到场景「{scenario}」在所选时段的数据。"
+    return {"reply": reply, "intent": "query_kpi", "chart": None,
+            "query_ref": {"scenario": scenario}}
 
-    return {
-        "code": 0, "message": "success",
-        "data": {
-            "reply": reply, "intent": "query_kpi", "chart": None,
-            "query_ref": {"scenario": scenario},
+
+# ---- 工具2：故障研判（意图 → 确定性规则引擎=接口2，LLM 不参与计算，规避幻觉） ----
+def tool_fault_diagnosis(scenario: str) -> dict:
+    win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
+    an = analyze_anomaly(AnomalyRequest(scenario=scenario,
+                                        window_start=win_start, window_end=win_end))
+    d = an["data"]
+    if d.get("is_anomaly"):
+        reply = f"检测到{d['anomaly_type']}（{d['level']}）：{d['cause']}。建议：{d['suggestion']}。"
+    else:
+        reply = f"当前时段未发现明显异常：{d.get('cause', d.get('reason', '暂无数据'))}。"
+    chart = {
+        "type": "line",
+        "option": {
+            "xAxis": {"data": [h["hour"] for h in d["hourly_trend"]]},
+            "series": [{"name": "RSRP(dBm)", "data": [h["rsrp_avg"] for h in d["hourly_trend"]]}],
         },
     }
+    return {"reply": reply, "intent": "fault_diagnosis", "chart": chart,
+            "detail": d, "query_ref": {"scenario": scenario,
+                                       "start_time": win_start, "end_time": win_end}}
+
+
+# ---- 工具3：热力图（等唐苗 AP/UE 坐标接口，先占位） ----
+def tool_heatmap(scenario: str) -> dict:
+    return {"reply": "热力图正在接入坐标数据接口（依赖 AP/UE 坐标），暂用基础数据演示。",
+            "intent": "get_heatmap", "chart": None, "query_ref": {"scenario": scenario}}
+
+
+# ---- 工具4：网络拓扑（基于 CSV 真实连接关系：AP 服务了哪些 UE） ----
+def tool_topology(scenario: str) -> dict:
+    win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
+    rows = filter_rows(scenario, win_start, win_end)
+    if not rows:
+        return {"reply": f"未找到场景「{scenario}」的数据，暂无法生成拓扑。",
+                "intent": "get_topology", "chart": None, "query_ref": {"scenario": scenario}}
+    ap_set = sorted({r["ap_id"] for r in rows})
+    ue_set = sorted({r["user_id"] for r in rows})
+    links, seen = [], set()
+    for r in rows:
+        key = (r["ap_id"], r["user_id"])
+        if key not in seen:
+            seen.add(key)
+            links.append({"source": r["ap_id"], "target": r["user_id"]})
+    nodes = [{"id": ap, "category": "AP"} for ap in ap_set] + \
+            [{"id": ue, "category": "UE"} for ue in ue_set]
+    return {"reply": f"已生成「{scenario}」的网络拓扑：{len(ap_set)}个AP、{len(ue_set)}个UE、{len(links)}条连接。",
+            "intent": "get_topology",
+            "chart": {"type": "graph", "option": {"nodes": nodes, "links": links}},
+            "detail": {"node_count": len(nodes), "link_count": len(links), "scenario": scenario},
+            "query_ref": {"scenario": scenario}}
+
+
+# ---- Function Calling 工具注册表：意图名 → 工具函数（新增工具在这里登记即可） ----
+TOOLS = {
+    "query_kpi": tool_query_kpi,
+    "fault_diagnosis": tool_fault_diagnosis,
+    "get_heatmap": tool_heatmap,
+    "get_topology": tool_topology,
+}
+
+
+@app.post("/api/agent/chat")
+def agent_chat(req: ChatRequest):
+    # 第2周升级版：LLM 意图解析 → Function Calling（工具注册表分发）→ 确定性工具执行
+    # LLM 不可用时自动降级关键词规则版（API 降级）；未知意图回退 KPI 查询
+    intent_obj = get_intent(req.message)
+    intent = intent_obj.get("intent", "query_kpi")
+    params = intent_obj.get("params", {})
+    scenario = resolve_scenario(params.get("scenario"), req.scenario)
+    handler = TOOLS.get(intent, TOOLS["query_kpi"])
+    data = handler(scenario)
+    return {"code": 0, "message": "success", "data": data}
 
 
 # ============ 接口4：导出分析报告 ============
