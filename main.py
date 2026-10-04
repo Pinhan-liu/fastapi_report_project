@@ -106,6 +106,75 @@ class AnomalyRequest(BaseModel):
     metrics: list[str] = ["rsrp", "sinr", "throughput"]
 
 
+def build_candidates(ap, base, anomaly_type):
+    """为单个AP的故障生成多候选原因与证据链（支持/反对/待验证），rank1 即主原因"""
+    rsrp = base["rsrp_avg"]; sinr = base["sinr_avg"]; prb = base["prb_avg"]
+    weak_r = base["weak_ratio"]; cong_r = base["cong_ratio"]
+    c1 = min(0.99, 0.6 + 0.08 * len(base["evidence"]))
+    if anomaly_type == "覆盖故障":
+        return [
+            {"rank": 1, "cause": f"{ap}天线倾角/发射功率不足，造成覆盖空洞",
+             "confidence": round(c1, 2),
+             "support_evidence": [f"弱覆盖采样占比{weak_r*100:.0f}%超过30%阈值",
+                                  (f"RSRP均值{rsrp:.1f}dBm低于-105dBm" if rsrp < -105
+                                   else f"RSRP均值{rsrp:.1f}dBm处于偏低水平")],
+             "against_evidence": [f"SINR均值{sinr:.1f}dB正常，可排除强干扰因素" if sinr >= 5
+                                  else f"SINR均值{sinr:.1f}dB也偏低，干扰因素暂不能排除"],
+             "pending_checks": ["现场核查天线倾角与发射功率配置"]},
+            {"rank": 2, "cause": f"{ap}周边新增遮挡物/环境变化导致信号衰减",
+             "confidence": round(c1 * 0.7, 2),
+             "support_evidence": ["故障呈时段性出现，与遮挡场景变化特征相符"],
+             "against_evidence": [f"拥塞采样占比{cong_r*100:.0f}%较低，非负荷因素" if cong_r <= 0.25
+                                  else f"拥塞采样占比{cong_r*100:.0f}%偏高，负荷因素需考虑"],
+             "pending_checks": ["现场勘查周边遮挡物或建筑变更"]},
+            {"rank": 3, "cause": f"{ap}邻区干扰或负荷牵引导致覆盖感知差",
+             "confidence": round(c1 * 0.5, 2),
+             "support_evidence": [f"PRB利用率{prb:.1f}%处于中高水平" if prb >= 50
+                                  else f"PRB利用率{prb:.1f}%正常，干扰证据有限"],
+             "against_evidence": [f"RSRP均值{rsrp:.1f}dBm与SINR{sinr:.1f}dB组合更指向覆盖问题"],
+             "pending_checks": ["核查邻区PRB占用与切换参数"]},
+        ]
+    if anomaly_type == "网络拥塞":
+        return [
+            {"rank": 1, "cause": f"{ap}容量不足/接入用户过多导致拥塞",
+             "confidence": round(c1, 2),
+             "support_evidence": [f"拥塞采样占比{cong_r*100:.0f}%超过25%阈值",
+                                  (f"PRB利用率均值{prb:.1f}%高于90%" if prb > 90
+                                   else f"PRB利用率均值{prb:.1f}%处于偏高水平")],
+             "against_evidence": [f"RSRP均值{rsrp:.1f}dBm正常，无线环境良好" if rsrp >= -105
+                                  else f"RSRP均值{rsrp:.1f}dBm偏低，需叠加覆盖因素"],
+             "pending_checks": ["核查活跃用户数与容量规划"]},
+            {"rank": 2, "cause": f"{ap}业务突发/流量高峰导致瞬时拥塞",
+             "confidence": round(c1 * 0.7, 2),
+             "support_evidence": ["拥塞集中在特定时段，符合业务高峰特征"],
+             "against_evidence": [f"弱覆盖采样占比{weak_r*100:.0f}%未超阈值，非覆盖因素" if weak_r <= 0.3
+                                  else f"弱覆盖采样占比{weak_r*100:.0f}%偏高，覆盖因素需考虑"],
+             "pending_checks": ["查看分时段流量分布与业务类型"]},
+            {"rank": 3, "cause": f"{ap}回程/传输链路瓶颈",
+             "confidence": round(c1 * 0.5, 2),
+             "support_evidence": [f"吞吐量均值{base['thr_avg']:.1f}Mbps与PRB高占用不匹配" if base['thr_avg'] < 100
+                                  else "吞吐量表现正常，回程瓶颈证据有限"],
+             "against_evidence": [],
+             "pending_checks": ["核查回程链路带宽与拥塞窗口"]},
+        ]
+    if anomaly_type == "边缘弱用户":
+        return [
+            {"rank": 1, "cause": f"{ap}用户位于覆盖边缘，信号质量差",
+             "confidence": round(c1, 2),
+             "support_evidence": [f"吞吐量均值{base['thr_avg']:.1f}Mbps低于50Mbps",
+                                  f"SINR均值{sinr:.1f}dB偏低"],
+             "against_evidence": [],
+             "pending_checks": ["查看用户位置分布与终端能力"]},
+            {"rank": 2, "cause": f"{ap}波束/参数配置未覆盖边缘区域",
+             "confidence": round(c1 * 0.6, 2),
+             "support_evidence": [f"RSRP均值{rsrp:.1f}dBm处于临界水平"],
+             "against_evidence": [f"弱覆盖采样占比{weak_r*100:.0f}%未超30%阈值"],
+             "pending_checks": ["核查波束配置与天线倾角"]},
+        ]
+    return [{"rank": 1, "cause": f"{ap}各项指标正常，无需处理", "confidence": round(0.95, 2),
+             "support_evidence": [], "against_evidence": [], "pending_checks": []}]
+
+
 def judge_ap(ap, ap_rows):
     """对单个AP做多KPI联合研判（通信规则 + 状态标签占比），返回研判结果dict"""
     rsrp_avg = avg(ap_rows, "rsrp")
@@ -145,19 +214,23 @@ def judge_ap(ap, ap_rows):
         level = "严重" if weak_ratio > 0.5 else "中等"
         return {**base, "anomaly_type": "覆盖故障", "level": level, "network_status": "weak_coverage",
                 "cause": f"{ap}弱覆盖采样占比{weak_ratio*100:.0f}%、RSRP均值{rsrp_avg:.1f}dBm，判定为覆盖空洞",
-                "suggestion": "建议检查AP天线倾角/功率或增加补盲AP"}
+                "suggestion": "建议检查AP天线倾角/功率或增加补盲AP",
+                "candidates": build_candidates(ap, base, "覆盖故障")}
     if cong_ratio > 0.25 or prb_avg > 90:
         level = "严重" if cong_ratio > 0.5 else "中等"
         return {**base, "anomaly_type": "网络拥塞", "level": level, "network_status": "congestion",
                 "cause": f"{ap}拥塞采样占比{cong_ratio*100:.0f}%、PRB利用率均值{prb_avg:.1f}%，判定为容量拥塞",
-                "suggestion": "建议负载均衡或扩容"}
+                "suggestion": "建议负载均衡或扩容",
+                "candidates": build_candidates(ap, base, "网络拥塞")}
     if thr_avg < 50:
         return {**base, "anomaly_type": "边缘弱用户", "level": "中等", "network_status": "weak_coverage",
                 "cause": f"{ap}吞吐量均值{thr_avg:.1f}Mbps偏低、SINR均值{sinr_avg:.1f}dB，判定为边缘弱用户",
-                "suggestion": "建议用户靠近信号源或调整波束"}
+                "suggestion": "建议用户靠近信号源或调整波束",
+                "candidates": build_candidates(ap, base, "边缘弱用户")}
 
     return {**base, "anomaly_type": "正常", "level": "低", "network_status": "normal",
-            "cause": f"{ap}各项指标均在正常范围", "suggestion": "无需处理"}
+            "cause": f"{ap}各项指标均在正常范围", "suggestion": "无需处理",
+            "candidates": build_candidates(ap, base, "正常")}
 
 
 @app.post("/api/analyze/anomaly")
@@ -213,6 +286,8 @@ def analyze_anomaly(req: AnomalyRequest):
         is_anomaly, anomaly_type, level = True, m["anomaly_type"], m["level"]
         evidence, cause, suggestion = m["evidence"], m["cause"], m["suggestion"]
         nstatus, affected_aps = m["network_status"], [f["ap_id"] for f in findings]
+        candidates = m.get("candidates", [])
+        ap_candidates = [{"ap_id": f["ap_id"], "candidates": f["candidates"]} for f in findings]
         confidence = round(min(0.99, 0.6 + 0.08 * len(evidence) + (0.1 if len(findings) > 1 else 0)), 2)
     elif hour_findings_all:
         # 整窗均值被正常时段稀释判"正常"，但存在时段性异常（小时级）
@@ -222,6 +297,8 @@ def analyze_anomaly(req: AnomalyRequest):
         is_anomaly, anomaly_type, level = True, m["anomaly_type"], m["level"]
         evidence, cause, suggestion = m["evidence"], m["cause"], m["suggestion"]
         nstatus, affected_aps = m["network_status"], [m["ap_id"]]
+        candidates = m.get("candidates", [])
+        ap_candidates = [{"ap_id": f["ap_id"], "candidates": f["candidates"]} for f in hour_findings_all]
         confidence = round(min(0.99, 0.6 + 0.08 * len(evidence) + 0.1), 2)
     else:
         rsrp_avg = avg(rows, "rsrp"); sinr_avg = avg(rows, "sinr")
@@ -231,6 +308,8 @@ def analyze_anomaly(req: AnomalyRequest):
         cause = (f"各AP的RSRP均值{rsrp_avg:.1f}dBm、SINR均值{sinr_avg:.1f}dB、PRB利用率{prb_avg:.1f}%、"
                  f"吞吐量均值{thr_avg:.1f}Mbps，各项指标均在正常范围")
         suggestion, nstatus, affected_aps = "无需处理", "normal", []
+        candidates = []
+        ap_candidates = []
         confidence = 0.95
 
     # 3) 多 AP 横向对比（哪台AP最差）
@@ -269,6 +348,8 @@ def analyze_anomaly(req: AnomalyRequest):
             "suggestion": suggestion,
             "affected_aps": affected_aps,
             "network_status": nstatus,
+            "candidates": candidates,
+            "ap_candidates": ap_candidates,
             "hourly_trend": hourly_trend,        # 新增：小时级趋势
             "ap_comparison": ap_comparison,      # 新增：多AP横向对比
             "alarm_history": alarm_history,      # 新增：告警历史
@@ -327,10 +408,61 @@ def tool_fault_diagnosis(scenario: str) -> dict:
                                        "start_time": win_start, "end_time": win_end}}
 
 
-# ---- 工具3：热力图（等唐苗 AP/UE 坐标接口，先占位） ----
+# ---- 工具3：热力图（真实：按 UE 坐标网格聚合 RSRP，ECharts heatmap 直接渲染） ----
 def tool_heatmap(scenario: str) -> dict:
-    return {"reply": "热力图正在接入坐标数据接口（依赖 AP/UE 坐标），暂用基础数据演示。",
-            "intent": "get_heatmap", "chart": None, "query_ref": {"scenario": scenario}}
+    win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
+    rows = filter_rows(scenario, win_start, win_end)
+    if not rows:
+        return {"reply": f"未找到场景「{scenario}」的数据，暂无法生成热力图。",
+                "intent": "get_heatmap", "chart": None, "query_ref": {"scenario": scenario}}
+
+    # 监测区域（与 data_generator.py MAP_RANGE 一致）与网格大小
+    x_min, x_max, y_min, y_max = 20.0, 480.0, 20.0, 430.0
+    grid = 40.0  # 40m×40m → 12列×11行
+    nx = int((x_max - x_min) // grid) + 1
+    ny = int((y_max - y_min) // grid) + 1
+
+    # 网格聚合：ue_x/ue_y → RSRP 均值
+    acc = {}  # (ix, iy) -> [sum_rsrp, count]
+    for r in rows:
+        try:
+            ux, uy, rsrp = float(r["ue_x"]), float(r["ue_y"]), float(r["rsrp"])
+        except Exception:
+            continue
+        ix = min(int((ux - x_min) // grid), nx - 1)
+        iy = min(int((uy - y_min) // grid), ny - 1)
+        s, c = acc.get((ix, iy), (0.0, 0))
+        acc[(ix, iy)] = (s + rsrp, c + 1)
+
+    x_labels = [round(x_min + i * grid, 1) for i in range(nx)]
+    y_labels = [round(y_min + i * grid, 1) for i in range(ny)]
+    data = [[ix, iy, round(s / c, 2)] for (ix, iy), (s, c) in sorted(acc.items())]
+
+    option = {
+        "tooltip": {"position": "top"},
+        "grid": {"height": "60%", "top": "10%"},
+        "xAxis": {"type": "category", "data": x_labels, "name": "X(m)",
+                  "splitArea": {"show": True}},
+        "yAxis": {"type": "category", "data": y_labels, "name": "Y(m)",
+                  "splitArea": {"show": True}},
+        "visualMap": {
+            "min": -120, "max": -60, "calculable": True, "orient": "horizontal",
+            "left": "center", "bottom": "2%", "text": ["强", "弱"],
+            "inRange": {"color": ["#313695", "#4575b4", "#74add1", "#abd9e9",
+                                  "#e0f3f8", "#fee090", "#fdae61", "#f46d43", "#d73027"]},
+        },
+        "series": [{
+            "name": "RSRP(dBm)", "type": "heatmap", "data": data,
+            "label": {"show": False},
+            "emphasis": {"itemStyle": {"shadowBlur": 10, "shadowColor": "rgba(0,0,0,0.5)"}},
+        }],
+    }
+    return {"reply": f"已生成「{scenario}」信号热力图：{len(data)}个采样网格，覆盖 X {x_min}~{x_max}m、Y {y_min}~{y_max}m。",
+            "intent": "get_heatmap", "chart": {"type": "heatmap", "option": option},
+            "detail": {"grid_count": len(data), "grid_size": grid,
+                       "x_range": [x_min, x_max], "y_range": [y_min, y_max],
+                       "scenario": scenario},
+            "query_ref": {"scenario": scenario, "start_time": win_start, "end_time": win_end}}
 
 
 # ---- 工具4：网络拓扑（基于 CSV 真实连接关系：AP 服务了哪些 UE） ----
