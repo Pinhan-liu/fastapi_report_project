@@ -49,31 +49,82 @@ POST /api/analyze/anomaly
 
 {
   "scenario": "校园",
-  "window_start": "2026-09-28 10:00:00",
-  "window_end": "2026-09-28 10:10:00",
-  "metrics": ["rsrp", "sinr", "throughput", "latency"]
+  "window_start": "2026-01-01 00:00:00",
+  "window_end": "2026-01-03 23:59:59",
+  "metrics": ["rsrp", "sinr", "throughput", "prb_usage"]
 }
 
-响应:
+响应（v2：含多候选原因 + 证据链）:
 
 {
   "code": 0,
   "message": "success",
   "data": {
     "is_anomaly": true,
-    "anomaly_type": "覆盖恶化",
+    "anomaly_type": "覆盖故障",
     "level": "严重",
-    "confidence": 0.87,
+    "confidence": 0.86,
     "kpi_evidence": [
-      {"metric": "rsrp", "avg_value": -108, "threshold": -100, "status": "异常"},
-      {"metric": "throughput", "avg_value": 2.3, "threshold": 10, "status": "异常"}
+      {"metric": "rsrp", "avg_value": -115.8, "threshold": -105, "status": "异常"}
     ],
-    "cause": "AP-01覆盖范围内用户RSRP持续低于-100dBm，SINR同步恶化，判定为覆盖空洞风险",
-    "suggestion": "建议检查AP-01天线倾角或增加补盲AP",
-    "affected_aps": ["AP-01", "AP-02"],
-    "network_status": "weak_coverage"
+    "cause": "AP-02弱覆盖采样占比79%、RSRP均值-115.8dBm，判定为覆盖空洞",
+    "suggestion": "建议检查AP天线倾角/功率或增加补盲AP",
+    "affected_aps": ["AP-02"],
+    "network_status": "weak_coverage",
+    "candidates": [
+      {
+        "rank": 1,
+        "cause": "AP-02天线倾角/发射功率不足，造成覆盖空洞",
+        "confidence": 0.76,
+        "support_evidence": ["弱覆盖采样占比79%超过30%阈值", "RSRP均值-115.8dBm低于-105dBm"],
+        "against_evidence": ["SINR均值-8.3dB也偏低，干扰因素暂不能排除"],
+        "pending_checks": ["现场核查天线倾角与发射功率配置"]
+      },
+      {
+        "rank": 2,
+        "cause": "AP-02周边新增遮挡物/环境变化导致信号衰减",
+        "confidence": 0.53,
+        "support_evidence": ["故障呈时段性出现，与遮挡场景变化特征相符"],
+        "against_evidence": ["拥塞采样占比0%较低，非负荷因素"],
+        "pending_checks": ["现场勘查周边遮挡物或建筑变更"]
+      },
+      {
+        "rank": 3,
+        "cause": "AP-02邻区干扰或负荷牵引导致覆盖感知差",
+        "confidence": 0.38,
+        "support_evidence": ["PRB利用率42.5%正常，干扰证据有限"],
+        "against_evidence": ["RSRP均值-115.8dBm与SINR-8.3dB组合更指向覆盖问题"],
+        "pending_checks": ["核查邻区PRB占用与切换参数"]
+      }
+    ],
+    "ap_candidates": [
+      {"ap_id": "AP-02", "candidates": [{"rank": 1, "cause": "...", "confidence": 0.76, "support_evidence": [...], "against_evidence": [...], "pending_checks": [...]}]}
+    ],
+    "hourly_trend": [
+      {"hour": "2026-01-01 10", "anomaly_type": "覆盖故障", "level": "中等",
+       "network_status": "weak_coverage", "rsrp_avg": -101.1, "sinr_avg": 10.1, "thr_avg": 408.3, "prb_avg": 57.1}
+    ],
+    "ap_comparison": [
+      {"ap_id": "AP-01", "rsrp_avg": -99.9, "sinr_avg": 10.4, "thr_avg": 391.5, "prb_avg": 52.2,
+       "weak_ratio": 0.326, "cong_ratio": 0.027, "anomaly_type": "覆盖故障", "level": "中等"}
+    ],
+    "alarm_history": [
+      {"time": "2026-01-01 23", "ap_id": "AP-01", "anomaly_type": "覆盖故障",
+       "level": "中等", "cause": "AP-01弱覆盖采样占比48%、RSRP均值-106.2dBm，判定为覆盖空洞"}
+    ]
   }
 }
+
+### 接口2 字段说明（v2 新增）
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| candidates | array | 主异常AP的多候选原因（rank1 即主结论）。每项含 cause / confidence / support_evidence（支持证据）/ against_evidence（反对证据）/ pending_checks（待验证项） |
+| ap_candidates | array | 所有异常AP的证据链汇总，每项 {ap_id, candidates}，供前端证据链图按AP展开 |
+| hourly_trend | array | 小时级趋势（回答"何时开始变差"），每项含 hour + 该小时最严重异常的类型/等级/KPI均值 |
+| ap_comparison | array | 多AP横向对比（哪台AP最差），含 weak_ratio/cong_ratio |
+| alarm_history | array | 小时×AP 告警历史（倒序，最多50条） |
+| kpi_evidence | array | 命中的KPI异常证据（metric/avg_value/threshold/status） |
 
 ## 接口3：自然语言对话
 
