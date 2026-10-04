@@ -10,7 +10,6 @@ import datetime
 import csv as _csv
 import statistics
 from pathlib import Path
-
 import llm_agent
 from llm_agent import get_intent
 
@@ -43,7 +42,6 @@ ALL_COLUMNS = ["timestamp", "ap_id", "ap_x", "ap_y", "user_id", "ue_x", "ue_y",
                "scenario", "network_status",
                "retransmission_count", "traffic_demand", "active_users"]
 
-
 def filter_rows(scenario, start_time, end_time, ap_id=None, user_id=None):
     """按场景/时间/AP/用户过滤 CSV 数据，按时间升序返回"""
     rows = []
@@ -60,13 +58,11 @@ def filter_rows(scenario, start_time, end_time, ap_id=None, user_id=None):
     rows.sort(key=lambda x: x["timestamp"])
     return rows
 
-
 def avg(rows, key):
     try:
         return statistics.mean(float(r[key]) for r in rows)
     except Exception:
         return 0.0
-
 
 # ============ 接口1：查询监测数据 ============
 @app.get("/api/data/query")
@@ -86,7 +82,6 @@ def data_query(
         wanted = [m.strip() for m in metrics.split(",")]
         columns = ["timestamp"] + wanted
     records = [{k: r[k] for k in columns} for r in rows]
-
     return {
         "code": 0,
         "message": "success",
@@ -97,7 +92,6 @@ def data_query(
         },
     }
 
-
 # ============ 接口2：多KPI联合故障研判 ============
 class AnomalyRequest(BaseModel):
     scenario: str
@@ -105,12 +99,12 @@ class AnomalyRequest(BaseModel):
     window_end: str
     metrics: list[str] = ["rsrp", "sinr", "throughput"]
 
-
 def build_candidates(ap, base, anomaly_type):
     """为单个AP的故障生成多候选原因与证据链（支持/反对/待验证），rank1 即主原因"""
     rsrp = base["rsrp_avg"]; sinr = base["sinr_avg"]; prb = base["prb_avg"]
     weak_r = base["weak_ratio"]; cong_r = base["cong_ratio"]
     c1 = min(0.99, 0.6 + 0.08 * len(base["evidence"]))
+
     if anomaly_type == "覆盖故障":
         return [
             {"rank": 1, "cause": f"{ap}天线倾角/发射功率不足，造成覆盖空洞",
@@ -174,7 +168,6 @@ def build_candidates(ap, base, anomaly_type):
     return [{"rank": 1, "cause": f"{ap}各项指标正常，无需处理", "confidence": round(0.95, 2),
              "support_evidence": [], "against_evidence": [], "pending_checks": []}]
 
-
 def judge_ap(ap, ap_rows):
     """对单个AP做多KPI联合研判（通信规则 + 状态标签占比），返回研判结果dict"""
     rsrp_avg = avg(ap_rows, "rsrp")
@@ -227,11 +220,9 @@ def judge_ap(ap, ap_rows):
                 "cause": f"{ap}吞吐量均值{thr_avg:.1f}Mbps偏低、SINR均值{sinr_avg:.1f}dB，判定为边缘弱用户",
                 "suggestion": "建议用户靠近信号源或调整波束",
                 "candidates": build_candidates(ap, base, "边缘弱用户")}
-
     return {**base, "anomaly_type": "正常", "level": "低", "network_status": "normal",
             "cause": f"{ap}各项指标均在正常范围", "suggestion": "无需处理",
             "candidates": build_candidates(ap, base, "正常")}
-
 
 @app.post("/api/analyze/anomaly")
 def analyze_anomaly(req: AnomalyRequest):
@@ -257,7 +248,6 @@ def analyze_anomaly(req: AnomalyRequest):
     by_hour = {}
     for r in rows:
         by_hour.setdefault(r["timestamp"][:13], []).append(r)  # "2026-01-01 10"
-
     hourly_trend = []
     hour_findings_all = []
     for hour in sorted(by_hour):
@@ -356,21 +346,17 @@ def analyze_anomaly(req: AnomalyRequest):
         },
     }
 
-
 # ============ 接口3：自然语言对话（LLM 意图 → Function Calling 工具注册表分发） ============
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "sess_001"
     scenario: str = "校园"
 
-
 VALID_SCENARIOS = ("校园", "商场", "体育馆")
-
 
 def resolve_scenario(params_scenario, default_scenario):
     """场景白名单校验：LLM 可能把"A区"之类当成场景，无效则回退请求默认场景"""
     return params_scenario if params_scenario in VALID_SCENARIOS else default_scenario
-
 
 # ---- 工具1：KPI 概况查询（真实 CSV 均值） ----
 def tool_query_kpi(scenario: str) -> dict:
@@ -384,7 +370,6 @@ def tool_query_kpi(scenario: str) -> dict:
         reply = f"未找到场景「{scenario}」在所选时段的数据。"
     return {"reply": reply, "intent": "query_kpi", "chart": None,
             "query_ref": {"scenario": scenario}}
-
 
 # ---- 工具2：故障研判（意图 → 确定性规则引擎=接口2，LLM 不参与计算，规避幻觉） ----
 def tool_fault_diagnosis(scenario: str) -> dict:
@@ -407,7 +392,6 @@ def tool_fault_diagnosis(scenario: str) -> dict:
             "detail": d, "query_ref": {"scenario": scenario,
                                        "start_time": win_start, "end_time": win_end}}
 
-
 # ---- 工具3：热力图（真实：按 UE 坐标网格聚合 RSRP，ECharts heatmap 直接渲染） ----
 def tool_heatmap(scenario: str) -> dict:
     win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
@@ -415,13 +399,11 @@ def tool_heatmap(scenario: str) -> dict:
     if not rows:
         return {"reply": f"未找到场景「{scenario}」的数据，暂无法生成热力图。",
                 "intent": "get_heatmap", "chart": None, "query_ref": {"scenario": scenario}}
-
     # 监测区域（与 data_generator.py MAP_RANGE 一致）与网格大小
     x_min, x_max, y_min, y_max = 20.0, 480.0, 20.0, 430.0
     grid = 40.0  # 40m×40m → 12列×11行
     nx = int((x_max - x_min) // grid) + 1
     ny = int((y_max - y_min) // grid) + 1
-
     # 网格聚合：ue_x/ue_y → RSRP 均值
     acc = {}  # (ix, iy) -> [sum_rsrp, count]
     for r in rows:
@@ -433,11 +415,9 @@ def tool_heatmap(scenario: str) -> dict:
         iy = min(int((uy - y_min) // grid), ny - 1)
         s, c = acc.get((ix, iy), (0.0, 0))
         acc[(ix, iy)] = (s + rsrp, c + 1)
-
     x_labels = [round(x_min + i * grid, 1) for i in range(nx)]
     y_labels = [round(y_min + i * grid, 1) for i in range(ny)]
     data = [[ix, iy, round(s / c, 2)] for (ix, iy), (s, c) in sorted(acc.items())]
-
     option = {
         "tooltip": {"position": "top"},
         "grid": {"height": "60%", "top": "10%"},
@@ -464,7 +444,6 @@ def tool_heatmap(scenario: str) -> dict:
                        "scenario": scenario},
             "query_ref": {"scenario": scenario, "start_time": win_start, "end_time": win_end}}
 
-
 # ---- 工具4：网络拓扑（基于 CSV 真实连接关系：AP 服务了哪些 UE） ----
 def tool_topology(scenario: str) -> dict:
     win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
@@ -488,7 +467,6 @@ def tool_topology(scenario: str) -> dict:
             "detail": {"node_count": len(nodes), "link_count": len(links), "scenario": scenario},
             "query_ref": {"scenario": scenario}}
 
-
 # ---- Function Calling 工具注册表：意图名 → 工具函数（新增工具在这里登记即可） ----
 TOOLS = {
     "query_kpi": tool_query_kpi,
@@ -496,7 +474,6 @@ TOOLS = {
     "get_heatmap": tool_heatmap,
     "get_topology": tool_topology,
 }
-
 
 @app.post("/api/agent/chat")
 def agent_chat(req: ChatRequest):
@@ -510,7 +487,6 @@ def agent_chat(req: ChatRequest):
     data = handler(scenario)
     return {"code": 0, "message": "success", "data": data}
 
-
 # ============ 接口4：导出分析报告 ============
 class ReportRequest(BaseModel):
     scenario: str
@@ -518,7 +494,6 @@ class ReportRequest(BaseModel):
     end_time: str
     format: str = "md"
     include_chart: bool = True
-
 
 @app.post("/api/export/report")
 def export_report(req: ReportRequest):
@@ -532,4 +507,114 @@ def export_report(req: ReportRequest):
             "report_id": report_id,
             "file_url": f"/download/reports/{report_id}.{ext}",
         },
+    }
+
+# ========== 热力图数据接口 ==========
+@app.get("/api/data/heatmap", summary="信号热力图数据")
+def get_heatmap(
+    scenario: str = Query(..., description="场景名，如：校园"),
+    start_time: str | None = Query(None, description="开始时间"),
+    end_time: str | None = Query(None, description="结束时间"),
+    metric: str = Query("rsrp", description="热力指标：rsrp / sinr")
+):
+    # 1. 复用已加载数据集，按条件过滤
+    rows = filter_rows(
+        scenario,
+        start_time or "2026-01-01 00:00:00",
+        end_time or "2026-12-31 23:59:59"
+    )
+
+    if not rows:
+        return {
+            "code": 0,
+            "message": "success",
+            "data": {"metric": metric, "grid_count": 0, "values": []}
+        }
+
+    # 2. 按AP坐标聚合，计算平均信号值
+    grid_map = {}
+    for r in rows:
+        key = (r["ap_x"], r["ap_y"])
+        if key not in grid_map:
+            grid_map[key] = []
+        grid_map[key].append(float(r[metric]))
+
+    # 3. 转成前端ECharts直接能用的格式
+    result = []
+    for (x, y), values in grid_map.items():
+        avg_val = sum(values) / len(values)
+        result.append([float(x), float(y), round(avg_val, 2)])
+
+    return {
+        "code": 0,
+        "message": "success",
+        "data": {
+            "metric": metric,
+            "grid_count": len(result),
+            "values": result
+        }
+    }
+
+# ========== 基础网络拓扑数据接口 ==========
+@app.get("/api/network/topology/basic", summary="基础网络拓扑数据")
+def get_basic_topology(
+    scenario: str = Query(..., description="场景名"),
+    timestamp: str | None = Query(None, description="指定时刻，默认取第一条数据的时刻")
+):
+    # 1. 复用已加载数据集
+    rows = filter_rows(scenario, "2026-01-01 00:00:00", "2026-12-31 23:59:59")
+
+    if not rows:
+        return {"code": 0, "message": "success", "data": {"nodes": [], "links": []}}
+
+    # 2. 默认取第一个时刻的拓扑
+    if not timestamp:
+        timestamp = rows[0]["timestamp"]
+    rows = [r for r in rows if r["timestamp"] == timestamp]
+
+    # 3. 构造节点列表（AP + UE）
+    nodes = []
+    ap_seen = set()
+    ue_seen = set()
+    for r in rows:
+        if r["ap_id"] not in ap_seen:
+            ap_seen.add(r["ap_id"])
+            nodes.append({
+                "id": r["ap_id"],
+                "type": "ap",
+                "x": float(r["ap_x"]),
+                "y": float(r["ap_y"])
+            })
+        if r["user_id"] not in ue_seen:
+            ue_seen.add(r["user_id"])
+            nodes.append({
+                "id": r["user_id"],
+                "type": "ue",
+                "x": float(r["ue_x"]),
+                "y": float(r["ue_y"])
+            })
+
+    # 4. 构造链路列表（AP-UE连接关系）
+    links = []
+    link_seen = set()
+    for r in rows:
+        key = (r["ap_id"], r["user_id"])
+        if key not in link_seen:
+            link_seen.add(key)
+            links.append({
+                "source": r["ap_id"],
+                "target": r["user_id"],
+                "rsrp": float(r["rsrp"]),
+                "sinr": float(r["sinr"]),
+                "throughput": float(r["throughput"])
+            })
+
+    return {
+        "code": 0,
+        "message": "success",
+        "data": {
+            "timestamp": timestamp,
+            "nodes": nodes,
+            "links": links
+        }
     }
