@@ -1,0 +1,22 @@
+.ain-scope-form { display:flex; flex-wrap:wrap; align-items:end; gap:12px; padding:16px; margin-bottom:16px; background:#fff; border:1px solid #dce6e8; border-radius:11px; }
+.ain-scope-form label { display:grid; gap:5px; font-size:11px; color:#71858e; }
+.ain-scope-form input,.ain-scope-form select { max-width:100%; padding:8px; border:1px solid #d5e2e4; border-radius:7px; color:#29454d; background:#fff; font:inherit; font-size:12px; }
+.ain-scope-form p,.ain-loaded-scope { flex-basis:100%; color:#82949b; font-size:11px; }
+.ain-scope-form input:focus-visible { outline:2px solid #187c79; outline-offset:2px; }
+.ain-threshold-list { display:flex; gap:8px; flex-wrap:wrap; margin:12px 0; }
+.ain-threshold-list span { background:#fff3e5; color:#9d6a35; border-radius:6px; padding:7px 10px; font-size:11px; }
+.ain-table-scroll { overflow:auto; margin-top:16px; }
+.ain-comparison { width:100%; border-collapse:collapse; font-size:11px; text-align:left; white-space:nowrap; }
+.ain-comparison caption { text-align:left; color:#71858e; padding-bottom:9px; }
+.ain-comparison th,.ain-comparison td { padding:9px; border-bottom:1px solid #e3ebec; }
+.ain-comparison th { background:#eef5f3; }
+.ain-more-evidence { margin-top:14px; border-top:1px solid #e3ebec; padding-top:12px; font-size:12px; }
+.ain-more-evidence summary { cursor:pointer; color:#187c79; }
+.ain-more-evidence>div { margin-top:12px; }
+.ain-more-evidence>ul { max-height:320px; overflow:auto; padding-left:20px; }
+.ain-more-evidence li { margin:12px 0; }
+.ain-tool-result { margin-top:16px; padding:16px; border:1px solid #dce6e8; border-radius:12px; background:#fff; }
+.ain-tool-result>.ain-real-chart { margin-top:14px; }
+.ain-spatial-key i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; }
+.ain-ap-ue-buttons { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+@media(max-width:760px) { .ain-scope-form label { flex:1 1 180px; } }

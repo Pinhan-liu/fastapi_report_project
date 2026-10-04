@@ -1,0 +1,196 @@
+import type {
+  QueryScope, MetricRecord, DashboardData, Diagnosis, Candidate, ChatResult, HeatCell, NetworkNode,
+} from "../types/backend";
+
+type Obj = Record<string, unknown>;
+type Fetcher = typeof fetch;
+const DAY = 86400_000;
+const MAX_ROWS = 1000;
+export const DEFAULT_SCOPE: QueryScope = {
+  scenario: "校园", start: "2026-01-01 10:00:00", end: "2026-01-01 11:59:59",
+};
+export const CASE_WINDOWS = [
+  { label: "覆盖案例", start: "2026-01-01 10:00:00", end: "2026-01-01 11:59:59" },
+  { label: "拥塞案例", start: "2026-01-01 20:00:00", end: "2026-01-01 21:59:59" },
+  { label: "边缘案例", start: "2026-01-01 00:00:00", end: "2026-01-01 23:59:59" },
+];
+const obj = (v: unknown): Obj => {
+  if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error("接口数据结构不正确");
+  return v as Obj;
+};
+const arr = (v: unknown): unknown[] => Array.isArray(v) ? v : [];
+const str = (v: unknown) => typeof v === "string" ? v : "";
+const strings = (v: unknown) => arr(v).filter((s): s is string => typeof s === "string");
+// 缺失指标保留为 NaN，图表转换为缺口；不能把空字符串变成 0。
+export function numeric(v: unknown): number {
+  if (typeof v !== "number" && typeof v !== "string") return NaN;
+  if (typeof v === "string" && !v.trim()) return NaN;
+  const n = Number(v); return Number.isFinite(n) ? n : NaN;
+}
+function requiredString(v: unknown, name: string) {
+  const s = str(v); if (!s) throw new Error(`接口缺少 ${name}`); return s;
+}
+function coordinate(v: unknown) {
+  const n = numeric(v); if (!Number.isFinite(n) || n < 0) throw new Error("接口坐标无效");
+  return n;
+}
+export function toEpoch(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(value)) throw new Error("时间格式应为 YYYY-MM-DD HH:mm:ss");
+  const n = Date.parse(value.replace(" ", "T") + "+08:00");
+  if (!Number.isFinite(n) || backendTime(n) !== value) throw new Error("时间值无效");
+  return n;
+}
+function backendTime(n: number) {
+  return new Date(n + 8 * 3600_000).toISOString().slice(0, 19).replace("T", " ");
+}
+export function scopeLabel(scope: QueryScope) {
+  return `${scope.scenario} · ${scope.start} — ${scope.end}（北京时间）`;
+}
+function validateScope(scope: QueryScope) {
+  const start = toEpoch(scope.start), end = toEpoch(scope.end);
+  if (!scope.scenario.trim() || end < start || end - start >= 3 * DAY) throw new Error("请选择场景，结束时间不早于开始时间，范围最多三天");
+  return { start, end };
+}
+async function request(path: string, signal?: AbortSignal, body?: unknown, fetcher: Fetcher = fetch): Promise<Obj> {
+  const controller = new AbortController();
+  const abort = () => controller.abort();
+  if (signal?.aborted) abort();
+  signal?.addEventListener("abort", abort, { once: true });
+  const timer = setTimeout(abort, 45_000);
+  try {
+    const res = await fetcher(`/api${path}`, {
+      method: body ? "POST" : "GET", signal: controller.signal,
+      headers: body ? { "Content-Type": "application/json" } : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error(`后端请求失败（HTTP ${res.status}）`);
+    let json: unknown;
+    try { json = await res.json(); } catch { throw new Error("接口未返回 JSON，请检查 Vite 代理和后端端口"); }
+    const envelope = obj(json);
+    if (envelope.code !== 0) throw new Error(str(envelope.message) || "后端业务错误");
+    return obj(envelope.data);
+  } catch (error) {
+    if (controller.signal.aborted) {
+      if (signal?.aborted) throw new DOMException("请求已取消", "AbortError");
+      throw new Error("请求超时，请检查后端及模型调用状态");
+    }
+    if (error instanceof TypeError) throw new Error("无法连接后端，请保持 8000 端口服务运行");
+    throw error;
+  } finally { clearTimeout(timer); signal?.removeEventListener("abort", abort); }
+}
+export function parseRecord(value: unknown): MetricRecord {
+  const r = obj(value), time = requiredString(r.timestamp, "timestamp"); toEpoch(time);
+  return {
+    ueId: requiredString(r.user_id, "user_id"), apId: requiredString(r.ap_id, "ap_id"),
+    timestamp: time.replace(" ", "T") + "+08:00", backendTime: time,
+    x: coordinate(r.ue_x), y: coordinate(r.ue_y), apX: coordinate(r.ap_x), apY: coordinate(r.ap_y),
+    rsrpDbm: numeric(r.rsrp), sinrDb: numeric(r.sinr), throughputMbps: numeric(r.throughput),
+    latencyMs: numeric(r.latency), packetLossPct: numeric(r.packet_loss),
+    resourceUtilizationPct: numeric(r.prb_usage), retransmissions: numeric(r.retransmission_count),
+    demandMbps: numeric(r.traffic_demand), status: str(r.network_status),
+  };
+}
+export async function fetchRecords(scope: QueryScope, signal?: AbortSignal, fetcher: Fetcher = fetch): Promise<MetricRecord[]> {
+  const { start, end } = validateScope(scope);
+  async function part(a: number, b: number): Promise<MetricRecord[]> {
+    const params = new URLSearchParams({ scenario: scope.scenario, start_time: backendTime(a), end_time: backendTime(b), limit: String(MAX_ROWS) });
+    const data = await request(`/data/query?${params}`, signal, undefined, fetcher);
+    if (!Array.isArray(data.records)) throw new Error("查询接口缺少 records 数组");
+    if (data.records.length >= MAX_ROWS) {
+      if (a === b) throw new Error("单秒数据达到接口上限，存在截断，请队友增加分页接口");
+      const mid = a + Math.floor((b - a) / 2000) * 1000;
+      return [...await part(a, mid), ...await part(mid + 1000, b)];
+    }
+    return data.records.map(parseRecord);
+  }
+  const rows: MetricRecord[] = [];
+  for (let a = start; a <= end; a += 2 * 3600_000) {
+    if (signal?.aborted) throw new DOMException("请求已取消", "AbortError");
+    rows.push(...await part(a, Math.min(end, a + 2 * 3600_000 - 1000)));
+  }
+  return rows.sort((a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp));
+}
+export function aggregateCells(records: MetricRecord[], size: number): HeatCell[] {
+  const cells = new Map<string, { x: number; y: number; sum: number; count: number }>();
+  for (const r of records) {
+    if (!Number.isFinite(r.rsrpDbm)) continue;
+    const x = Math.floor(r.x / size) * size, y = Math.floor(r.y / size) * size;
+    const key = `${x},${y}`, c = cells.get(key) || { x, y, sum: 0, count: 0 };
+    c.sum += r.rsrpDbm; c.count++; cells.set(key, c);
+  }
+  return [...cells.values()].map(c => ({ x: c.x, y: c.y, value: c.sum / c.count, count: c.count }));
+}
+export async function loadDashboard(scope: QueryScope, signal?: AbortSignal, fetcher: Fetcher = fetch): Promise<DashboardData | null> {
+  const metrics = await fetchRecords(scope, signal, fetcher);
+  if (!metrics.length) return null;
+  const latest = metrics.at(-1)!;
+  const params = new URLSearchParams({ scenario: scope.scenario, timestamp: latest.backendTime });
+  const heatParams = new URLSearchParams({ scenario: scope.scenario, start_time: scope.start, end_time: scope.end, metric: "rsrp" });
+  const [topology, heat] = await Promise.all([
+    request(`/network/topology/basic?${params}`, signal, undefined, fetcher),
+    request(`/data/heatmap?${heatParams}`, signal, undefined, fetcher),
+  ]);
+  if (topology.timestamp !== latest.backendTime || !Array.isArray(topology.nodes) || !Array.isArray(topology.links)) throw new Error("拓扑时刻或返回结构与当前采样不一致");
+  const nodes = topology.nodes.map((v): NetworkNode => {
+    const n = obj(v), type = n.type;
+    if (type !== "ap" && type !== "ue") throw new Error("拓扑节点类型无效");
+    return { id: requiredString(n.id, "node.id"), type, x: coordinate(n.x), y: coordinate(n.y) };
+  });
+  const links = topology.links.map(v => {
+    const l = obj(v), source = requiredString(l.source, "link.source"), target = requiredString(l.target, "link.target");
+    return { id: `${source}->${target}`, source, target, rsrp: numeric(l.rsrp), sinr: numeric(l.sinr), throughput: numeric(l.throughput) };
+  });
+  if (!Array.isArray(heat.values)) throw new Error("热力接口缺少 values 数组");
+  const apMeans = heat.values.map(v => {
+    if (!Array.isArray(v) || v.length < 3 || !Number.isFinite(numeric(v[2]))) throw new Error("热力点位无效");
+    return [coordinate(v[0]), coordinate(v[1]), numeric(v[2])] as [number, number, number];
+  });
+  const gridSize = 40;
+  return {
+    scope: { ...scope }, generatedAt: latest.timestamp, metrics, nodes, links,
+    area: {
+      width: Math.ceil(Math.max(480, ...metrics.map(r => r.x + gridSize), ...nodes.map(n => n.x)) / gridSize) * gridSize,
+      height: Math.ceil(Math.max(440, ...metrics.map(r => r.y + gridSize), ...nodes.map(n => n.y)) / gridSize) * gridSize,
+    }, gridSize, cells: aggregateCells(metrics, gridSize), apMeans,
+  };
+}
+function candidate(value: unknown, i: number): Candidate {
+  const c = obj(value);
+  return { rank: numeric(c.rank) || i + 1, cause: str(c.cause), score: numeric(c.confidence),
+    support: strings(c.support_evidence), against: strings(c.against_evidence), checks: strings(c.pending_checks) };
+}
+export function parseDiagnosis(value: unknown, scope: QueryScope): Diagnosis {
+  const d = obj(value);
+  if (typeof d.is_anomaly !== "boolean") throw new Error("诊断接口缺少 is_anomaly");
+  const comparison = arr(d.ap_comparison).map(v => {
+    const a = obj(v); return { id: str(a.ap_id), type: str(a.anomaly_type), level: str(a.level),
+      rsrp: numeric(a.rsrp_avg), sinr: numeric(a.sinr_avg), throughput: numeric(a.thr_avg), prb: numeric(a.prb_avg) };
+  });
+  return {
+    scope: { ...scope }, state: d.is_anomaly ? "anomaly" : comparison.length ? "normal" : "empty",
+    anomalyType: str(d.anomaly_type), level: str(d.level), score: numeric(d.confidence),
+    cause: str(d.cause) || str(d.reason), suggestion: str(d.suggestion), affectedAps: strings(d.affected_aps),
+    evidence: arr(d.kpi_evidence).map(v => { const e = obj(v); return { metric: str(e.metric), value: numeric(e.avg_value), threshold: numeric(e.threshold), status: str(e.status) }; }),
+    candidates: arr(d.candidates).map(candidate),
+    apCandidates: arr(d.ap_candidates).map(v => { const a = obj(v); return { id: str(a.ap_id), candidates: arr(a.candidates).map(candidate) }; }),
+    comparison, alarms: arr(d.alarm_history).map(v => { const a = obj(v); return { time: str(a.time), ap: str(a.ap_id), type: str(a.anomaly_type), level: str(a.level), cause: str(a.cause) }; }),
+  };
+}
+export async function analyzeNetwork(scope: QueryScope, signal?: AbortSignal): Promise<Diagnosis> {
+  validateScope(scope);
+  const data = await request("/analyze/anomaly", signal, { scenario: scope.scenario, window_start: scope.start, window_end: scope.end, metrics: ["rsrp", "sinr", "throughput", "prb_usage", "packet_loss"] });
+  return parseDiagnosis(data, scope);
+}
+export async function chatNetwork(message: string, scenario: string, signal?: AbortSignal): Promise<ChatResult> {
+  const data = await request("/agent/chat", signal, { message, scenario, session_id: "frontend-p0" });
+  const ref = data.query_ref ? obj(data.query_ref) : {};
+  // 源码中四个工具均固定使用这三天；query_ref 未提供时间时明确使用工具范围。
+  const scope = { scenario: str(ref.scenario) || scenario, start: str(ref.start_time) || "2026-01-01 00:00:00", end: str(ref.end_time) || "2026-01-03 23:59:59" };
+  validateScope(scope);
+  const intent = str(data.intent), rawChart = data.chart ? obj(data.chart) : null;
+  return {
+    reply: requiredString(data.reply, "reply"), intent, scope,
+    diagnosis: intent === "fault_diagnosis" && data.detail ? parseDiagnosis(data.detail, scope) : null,
+    chart: rawChart?.option ? { type: str(rawChart.type), option: obj(rawChart.option) } : null,
+  };
+}

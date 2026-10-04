@@ -1,0 +1,142 @@
+.ain-query-tip {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #7a8e96;
+}
+
+.ain-query-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.ain-query-shortcuts .ain-button {
+  font-size: 11px;
+  padding: 6px 9px;
+}
+
+.ain-query-form textarea {
+  color: #35545c;
+  line-height: 1.7;
+}
+
+.ain-query-form textarea:focus-visible {
+  outline: 2px solid #187c79;
+  outline-offset: 2px;
+}
+
+.ain-query-form > button {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.ain-query-input-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #899ba2;
+  font-size: 10px;
+  margin-top: 4px;
+}
+
+.ain-query-error {
+  padding: 9px 10px;
+  margin-top: 10px !important;
+  border-radius: 7px;
+  background: #fff2ed;
+  color: #93573d;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.ain-query-history-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.ain-query-clear {
+  border: 0;
+  background: none;
+  color: #71858e;
+  padding: 3px 0;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.ain-query-clear:disabled {
+  cursor: not-allowed;
+  color: #a4b2b7;
+}
+
+.ain-query-history-note {
+  color: #899ba2;
+  font-size: 10px;
+  margin: 5px 0 8px !important;
+}
+
+.ain-query-history {
+  max-height: 230px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  padding-right: 4px;
+}
+
+.ain-query-empty {
+  color: #899ba2;
+  font-size: 11px;
+  line-height: 1.7;
+  padding: 10px 0;
+}
+
+.ain-query-record {
+  border: 1px solid #e0e9e9;
+  border-radius: 8px;
+  background: #f8fbfa;
+  padding: 10px;
+  margin-bottom: 8px;
+}
+
+.ain-query-record-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #718f91;
+  font-size: 10px;
+}
+
+.ain-query-record-meta time {
+  white-space: nowrap;
+}
+
+.ain-query-question {
+  color: #35545c;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 6px !important;
+  overflow-wrap: anywhere;
+}
+
+.ain-query-answer {
+  color: #7a8e96;
+  font-size: 11px;
+  line-height: 1.7;
+  margin-top: 5px !important;
+  overflow-wrap: anywhere;
+}
+
+.ain-query-record.is-error {
+  background: #fff8f4;
+  border-color: #efd7ca;
+}
+
+.ain-query-record.is-error .ain-query-record-meta {
+  color: #a5755b;
+}
