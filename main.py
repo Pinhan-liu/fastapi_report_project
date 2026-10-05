@@ -14,7 +14,32 @@ import llm_agent
 from llm_agent import get_intent
 
 app = FastAPI()
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
+# 全局参数校验异常处理：统一返回格式
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=400,
+        content={
+            "code": 40001,
+            "message": "参数校验失败",
+            "data": None
+        }
+    )
+
+# ========== 新增：全局服务端异常兜底 ==========
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "code": 50000,
+            "message": "服务内部错误",
+            "data": None
+        }
+    )
 # 允许前端(React dev server 5173)跨域调用本后端
 app.add_middleware(
     CORSMiddleware,
@@ -64,33 +89,43 @@ def avg(rows, key):
     except Exception:
         return 0.0
 
+
 # ============ 接口1：查询监测数据 ============
 @app.get("/api/data/query")
 def data_query(
-    scenario: str = Query(..., description="场景，如：校园"),
-    start_time: str = Query("2026-01-01 00:00:00", description="开始时间"),
-    end_time: str = Query("2026-01-03 23:59:59", description="结束时间"),
-    ap_id: str | None = Query(None, description="AP编号，不传查全部"),
-    user_id: str | None = Query(None, description="用户编号，不传查全部"),
-    metrics: str | None = Query(None, description="要返回的KPI列，逗号分隔，如 rsrp,sinr；不传返回全部"),
-    limit: int = Query(100, ge=1, le=1000, description="最多返回条数"),
+        scenario: str = Query(..., description="场景，如：校园"),
+        start_time: str = Query("2026-01-01 00:00:00", description="开始时间"),
+        end_time: str = Query("2026-01-03 23:59:59", description="结束时间"),
+        ap_id: str | None = Query(None, description="AP编号，不传查全部"),
+        user_id: str | None = Query(None, description="用户编号，不传查全部"),
+        metrics: str | None = Query(None, description="要返回的KPI列，逗号分隔，如 rsrp,sinr；不传返回全部"),
+        offset: int = Query(0, ge=0, description="分页偏移量，从第几条开始"),
+        limit: int = Query(100, ge=1, le=1000, description="最多返回条数"),
 ):
-    # 从唐苗CSV按条件过滤，返回真实数据
-    rows = filter_rows(scenario, start_time, end_time, ap_id, user_id)[:limit]
+    # 1. 先按条件全量过滤，得到所有符合条件的数据
+    all_rows = filter_rows(scenario, start_time, end_time, ap_id, user_id)
+    # 2. 总记录数 = 全量过滤后的数量，不受分页参数影响
+    total = len(all_rows)
+    # 3. 按分页参数切片，得到当前页数据
+    page_rows = all_rows[offset: offset + limit]
+
+    # 字段裁剪逻辑不变
     columns = ALL_COLUMNS
     if metrics:
         wanted = [m.strip() for m in metrics.split(",")]
         columns = ["timestamp"] + wanted
-    records = [{k: r[k] for k in columns} for r in rows]
+    records = [{k: r[k] for k in columns} for r in page_rows]
+
     return {
         "code": 0,
         "message": "success",
         "data": {
-            "total": len(records),
+            "total": total,  # 修复：返回符合条件的总记录数
             "columns": columns,
-            "records": records,
+            "records": records,  # 当前页数据
         },
     }
+
 
 # ============ 接口2：多KPI联合故障研判 ============
 class AnomalyRequest(BaseModel):
@@ -346,6 +381,51 @@ def analyze_anomaly(req: AnomalyRequest):
         },
     }
 
+# ============ 关键词规则库（API降级独立路径，不依赖LLM） ============
+KEYWORD_RULES = {
+    "query_kpi": [
+        # 通用查询
+        "查一下", "整体情况", "概况", "kpi", "指标", "运行情况", "网络状态",
+        "数据概况", "当前情况", "整体网络", "网络怎么样", "基本情况", "看看数据",
+        "随便", "看看", "随便看看", "随便说点", "有什么", "介绍一下",
+        # 指标类直查
+        "rsrp", "sinr", "吞吐量", "时延", "丢包率", "prb利用率", "信号强度"
+    ],
+"fault_diagnosis": [
+    # 通用故障类
+    "异常", "故障", "问题", "拥塞", "掉线", "差", "不好", "排查",
+    "分析异常", "有没有问题", "故障诊断", "什么原因", "为什么", "定位问题",
+    # 覆盖类细分
+    "弱覆盖", "覆盖差", "信号差", "信号弱", "覆盖空洞", "信号不好",
+    # 容量类细分
+    "拥塞", "容量不足", "用户多", "卡", "慢", "prb高",
+    # 时延/丢包类细分
+    "时延高", "延迟大", "时延大", "ping高", "丢包", "丢包率高", "断连",
+    # 速率类细分
+    "吞吐量低", "带宽不足", "速率低", "网速慢", "速率差"
+    ],
+    "get_heatmap": [
+        "热力图", "热图", "信号分布", "覆盖图", "信号热力", "覆盖热力", "热力分布",
+        "信号覆盖情况", "覆盖分布", "场强分布"
+    ],
+    "get_topology": [
+        "拓扑", "结构", "连接关系", "节点", "链路", "网络拓扑", "拓扑结构", "组网",
+        "设备连接", "有哪些设备", "基站分布"
+    ]
+}
+
+
+def match_intent_by_keyword(message: str) -> str | None:
+    msg = message.lower()
+    best_intent = None
+    max_len = 0
+    for intent, keywords in KEYWORD_RULES.items():
+        for kw in keywords:
+            if kw in msg and len(kw) > max_len:
+                max_len = len(kw)
+                best_intent = intent
+    return best_intent
+
 # ============ 接口3：自然语言对话（LLM 意图 → Function Calling 工具注册表分发） ============
 class ChatRequest(BaseModel):
     message: str
@@ -475,17 +555,38 @@ TOOLS = {
     "get_topology": tool_topology,
 }
 
+
+# 开关：可配置是否启用LLM增强，LLM故障时设为False即可纯规则运行
+
+ENABLE_LLM = True
+
+
 @app.post("/api/agent/chat")
 def agent_chat(req: ChatRequest):
-    # 第2周升级版：LLM 意图解析 → Function Calling（工具注册表分发）→ 确定性工具执行
-    # LLM 不可用时自动降级关键词规则版（API 降级）；未知意图回退 KPI 查询
-    intent_obj = get_intent(req.message)
-    intent = intent_obj.get("intent", "query_kpi")
-    params = intent_obj.get("params", {})
+    # 1. 第一层：关键词规则匹配（独立主路径，完全不依赖LLM）
+    intent = match_intent_by_keyword(req.message)
+    params = {}
+
+    # 2. 第二层：关键词未命中 + 启用LLM时，才调用大模型增强识别
+    if not intent and ENABLE_LLM:
+        try:
+            intent_obj = get_intent(req.message)
+            intent = intent_obj.get("intent", "query_kpi")
+            params = intent_obj.get("params", {})
+        except Exception:
+            # LLM调用失败，自动降级，不抛出错误
+            intent = "query_kpi"
+
+    # 3. 第三层：最终兜底，任何非法/未知意图全部回退KPI查询
+    if intent not in TOOLS:
+        intent = "query_kpi"
+
+    # 4. 执行工具，输出格式和正常链路完全一致
     scenario = resolve_scenario(params.get("scenario"), req.scenario)
     handler = TOOLS.get(intent, TOOLS["query_kpi"])
     data = handler(scenario)
     return {"code": 0, "message": "success", "data": data}
+
 
 # ============ 接口4：导出分析报告 ============
 class ReportRequest(BaseModel):
