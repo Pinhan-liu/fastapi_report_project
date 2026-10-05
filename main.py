@@ -12,6 +12,7 @@ import statistics
 from pathlib import Path
 import llm_agent
 from llm_agent import get_intent
+from realtime_simulator import start_realtime_service, get_incremental_data, DATA_COLUMNS
 
 app = FastAPI()
 from fastapi.exceptions import RequestValidationError
@@ -719,3 +720,24 @@ def get_basic_topology(
             "links": links
         }
     }
+
+#新增实时数据接口
+@app.get("/api/data/realtime", summary="获取实时增量监测数据")
+def api_get_realtime_data(last_time: str = None):
+    """
+    获取分钟级增量监测数据
+    - last_time: 上次拉取的最大时间戳，格式 yyyy-MM-dd HH:mm:ss，不传则返回最近10条
+    """
+    records = get_incremental_data(last_time)
+    return {
+        "code": 0,
+        "message": "success",
+        "data": {
+            "total": len(records),
+            "columns": DATA_COLUMNS,
+            "records": records
+        }
+    }
+# 启动实时数据模拟服务
+start_realtime_service(interval_seconds=60)
+
