@@ -13,10 +13,45 @@ from pathlib import Path
 import llm_agent
 from llm_agent import get_intent
 from realtime_simulator import start_realtime_service, get_incremental_data, DATA_COLUMNS
+from fastapi import Request, status
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from datetime import datetime
+
+# ======================
+# 统一错误码定义（与api.md文档严格对齐）
+# ======================
+ERROR_CODE = {
+    "SUCCESS": 0,
+    "PARAM_MISSING": 40001,       # 必填参数缺失
+    "PARAM_INVALID": 40002,       # 参数格式非法
+    "PARAM_OUT_OF_RANGE": 40003,  # 参数值超出合法范围
+    "INTERNAL_ERROR": 50001,      # 服务内部异常
+}
+
+# ======================
+# 统一响应构造工具
+# ======================
+def success_response(data=None):
+    """成功响应，统一格式"""
+    return {
+        "code": ERROR_CODE["SUCCESS"],
+        "message": "success",
+        "data": data
+    }
+
+def error_response(code: int, message: str, data=None):
+    """错误响应，统一格式"""
+    return {
+        "code": code,
+        "message": message,
+        "data": data
+    }
+
 
 app = FastAPI()
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+
 
 # 全局参数校验异常处理：统一返回格式
 @app.exception_handler(RequestValidationError)
@@ -30,13 +65,32 @@ async def validation_exception_handler(request, exc):
         }
     )
 
+# 拦截接口不存在、请求方法错误等场景，统一返回JSON
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    if exc.status_code == 404:
+        msg = "请求的接口不存在"
+    elif exc.status_code == 405:
+        msg = "请求方法不支持"
+    else:
+        msg = exc.detail
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "code": 40001,
+            "message": msg,
+            "data": None
+        }
+    )
+
 # ========== 新增：全局服务端异常兜底 ==========
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     return JSONResponse(
         status_code=500,
         content={
-            "code": 50000,
+            "code": 50001,
             "message": "服务内部错误",
             "data": None
         }
@@ -728,6 +782,17 @@ def api_get_realtime_data(last_time: str = None):
     获取分钟级增量监测数据
     - last_time: 上次拉取的最大时间戳，格式 yyyy-MM-dd HH:mm:ss，不传则返回最近10条
     """
+    # 参数格式校验
+    if last_time is not None:
+        try:
+            datetime.strptime(last_time, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return {
+                "code": 40002,
+                "message": "时间参数格式错误，正确格式：yyyy-MM-dd HH:mm:ss",
+                "data": None
+            }
+
     records = get_incremental_data(last_time)
     return {
         "code": 0,
@@ -738,6 +803,4 @@ def api_get_realtime_data(last_time: str = None):
             "records": records
         }
     }
-# 启动实时数据模拟服务
-start_realtime_service(interval_seconds=60)
 

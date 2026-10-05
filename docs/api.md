@@ -1,12 +1,10 @@
 # API 接口文档
-
 Base URL: http://localhost:8000
 数据格式: JSON (UTF-8)
 时间格式: "yyyy-MM-dd HH:mm:ss"
 单位: rsrp(dBm) sinr(dB) throughput(Mbps) latency(ms) packet_loss(%) prb_usage(%)
 
 ## 接口总览
-
 |接口|方法|路径|用途|
 |---|---|---|---|
 |1|GET|/api/data/query|查询监测数据|
@@ -15,21 +13,27 @@ Base URL: http://localhost:8000
 |4|POST|/api/export/report|导出分析报告|
 |5|GET|/api/data/heatmap|信号热力图数据|
 |6|GET|/api/network/topology/basic|基础网络拓扑数据|
+|7|GET|/api/data/realtime|实时增量监测数据|
 
 ## 通用响应格式
-
 成功: {"code": 0, "message": "success", "data": {...}}
 失败: {"code": 40001, "message": "参数错误：缺少scenario", "data": null}
-错误码约定: 0=成功 400xx=参数错误 500xx=服务端错误
+
+错误码约定:
+|错误码|类型|说明|
+|---|---|---|
+|0|成功|请求处理成功|
+|40001|参数错误|必填参数缺失|
+|40002|参数错误|参数格式非法|
+|40003|参数错误|参数值超出合法范围|
+|50001|服务端错误|服务内部异常|
 
 ## 接口1：查询监测数据
-
 GET /api/data/query?scenario=校园&start_time=2026-09-28 00:00:00&end_time=2026-09-28 23:59:59&ap_id=AP-01&limit=100
-
 可选参数: metrics=rsrp,sinr,throughput（不传则返回全部KPI列）
 
 响应:
-
+```json
 {
   "code": 0,
   "message": "success",
@@ -42,22 +46,26 @@ GET /api/data/query?scenario=校园&start_time=2026-09-28 00:00:00&end_time=2026
     ]
   }
 }
+```
 
-## 接口2：多KPI联合故障研判
+## 接口 2：多 KPI 联合故障研判
 
 POST /api/analyze/anomaly
 
 请求:
 
+```json
 {
   "scenario": "校园",
   "window_start": "2026-01-01 00:00:00",
   "window_end": "2026-01-03 23:59:59",
   "metrics": ["rsrp", "sinr", "throughput", "prb_usage"]
 }
+```
 
-响应（v2：含多候选原因 + 证据链）:
+响应（v2：含多候选原因 \+ 证据链）:
 
+```json
 {
   "code": 0,
   "message": "success",
@@ -116,32 +124,36 @@ POST /api/analyze/anomaly
     ]
   }
 }
+```
 
-### 接口2 字段说明（v2 新增）
+### 接口 2 字段说明（v2 新增）
 
-| 字段 | 类型 | 说明 |
+|字段|类型|说明|
 |---|---|---|
-| candidates | array | 主异常AP的多候选原因（rank1 即主结论）。每项含 cause / confidence / support_evidence（支持证据）/ against_evidence（反对证据）/ pending_checks（待验证项） |
-| ap_candidates | array | 所有异常AP的证据链汇总，每项 {ap_id, candidates}，供前端证据链图按AP展开 |
-| hourly_trend | array | 小时级趋势（回答"何时开始变差"），每项含 hour + 该小时最严重异常的类型/等级/KPI均值 |
-| ap_comparison | array | 多AP横向对比（哪台AP最差），含 weak_ratio/cong_ratio |
-| alarm_history | array | 小时×AP 告警历史（倒序，最多50条） |
-| kpi_evidence | array | 命中的KPI异常证据（metric/avg_value/threshold/status） |
+|candidates|array|主异常 AP 的多候选原因（rank1 即主结论）。每项含 cause /confidence/support\_evidence（支持证据）/against\_evidence（反对证据）/pending\_checks（待验证项）|
+|ap\_candidates|array|所有异常 AP 的证据链汇总，每项 \{ap\_id, candidates\}，供前端证据链图按 AP 展开|
+|hourly\_trend|array|小时级趋势（回答 "何时开始变差"），每项含 hour \+ 该小时最严重异常的类型 / 等级 / KPI 均值|
+|ap\_comparison|array|多 AP 横向对比（哪台 AP 最差），含 weak\_ratio/cong\_ratio|
+|alarm\_history|array|小时 ×AP 告警历史（倒序，最多 50 条）|
+|kpi\_evidence|array|命中的 KPI 异常证据（metric/avg\_value/threshold/status）|
 
-## 接口3：自然语言对话
+## 接口 3：自然语言对话
 
 POST /api/agent/chat
 
 请求:
 
+```json
 {
   "message": "帮我看看10点到10点10分网络有没有问题",
   "session_id": "sess_001",
   "scenario": "校园"
 }
+```
 
 响应:
 
+```json
 {
   "code": 0,
   "message": "success",
@@ -158,13 +170,15 @@ POST /api/agent/chat
     "query_ref": {"scenario": "校园", "start_time": "2026-09-28 10:00:00", "end_time": "2026-09-28 10:10:00"}
   }
 }
+```
 
-## 接口4：导出分析报告
+## 接口 4：导出分析报告
 
 POST /api/export/report
 
 请求:
 
+```json
 {
   "scenario": "校园",
   "start_time": "2026-09-28 00:00:00",
@@ -172,9 +186,11 @@ POST /api/export/report
   "format": "md",
   "include_chart": true
 }
+```
 
 响应:
 
+```json
 {
   "code": 0,
   "message": "success",
@@ -183,6 +199,8 @@ POST /api/export/report
     "file_url": "/download/reports/RPT_20260928_01.md"
   }
 }
+```
+
 ## 接口 5：信号热力图数据
 
 GET /api/data/heatmap?scenario = 校园 \& start\_time=2026\-01\-01 00:00:00\&end\_time=2026\-01\-03 23:59:59\&metric=rsrp
@@ -194,19 +212,22 @@ GET /api/data/heatmap?scenario = 校园 \& start\_time=2026\-01\-01 00:00:00\&en
 - `metric`：热力指标，可选 `rsrp` / `sinr`，默认 `rsrp`
 
 响应:
-\{
-"code": 0,
-"message": "success",
-"data": \{
-"metric": "rsrp",
-"grid\_count": 3,
-"values": \[
-\[120, 220, \-92\.54\],
-\[380, 160, \-92\.51\],
-\[260, 350, \-92\.27\]
-\]
-\}
-\}
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "metric": "rsrp",
+    "grid_count": 3,
+    "values": [
+      [120, 220, -92.54],
+      [380, 160, -92.51],
+      [260, 350, -92.27]
+    ]
+  }
+}
+```
 
 ### 接口 5 字段说明
 
@@ -225,23 +246,26 @@ GET /api/network/topology/basic?scenario = 校园 \& timestamp=2026\-01\-01 00:0
 - `timestamp`：指定时刻，不传则默认取第一条数据的时刻
 
 响应:
-\{
-"code": 0,
-"message": "success",
-"data": \{
-"timestamp": "2026\-01\-01 00:00:00",
-"nodes": \[
-\{"id": "AP\-01", "type": "ap", "x": 120, "y": 220\},
-\{"id": "UE\-01", "type": "ue", "x": 94\.8, "y": 192\.62\},
-\{"id": "AP\-02", "type": "ap", "x": 380, "y": 160\},
-\{"id": "UE\-02", "type": "ue", "x": 372\.32, "y": 129\.2\}
-\],
-"links": \[
-\{"source": "AP\-01", "target": "UE\-01", "rsrp": \-92\.5, "sinr": 10\.2, "throughput": 128\.5\},
-\{"source": "AP\-02", "target": "UE\-02", "rsrp": \-91\.8, "sinr": 11\.5, "throughput": 135\.2\}
-\]
-\}
-\}
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "timestamp": "2026-01-01 00:00:00",
+    "nodes": [
+      {"id": "AP-01", "type": "ap", "x": 120, "y": 220},
+      {"id": "UE-01", "type": "ue", "x": 94.8, "y": 192.62},
+      {"id": "AP-02", "type": "ap", "x": 380, "y": 160},
+      {"id": "UE-02", "type": "ue", "x": 372.32, "y": 129.2}
+    ],
+    "links": [
+      {"source": "AP-01", "target": "UE-01", "rsrp": -92.5, "sinr": 10.2, "throughput": 128.5},
+      {"source": "AP-02", "target": "UE-02", "rsrp": -91.8, "sinr": 11.5, "throughput": 135.2}
+    ]
+  }
+}
+```
 
 ### 接口 6 字段说明
 
@@ -251,3 +275,44 @@ GET /api/network/topology/basic?scenario = 校园 \& timestamp=2026\-01\-01 00:0
 |nodes|array|节点列表，包含 AP 与 UE 两类；每项含 `id` / `type` / `x` / `y`|
 |links|array|AP\-UE 连接链路列表；每项含两端节点 ID 及 `rsrp` / `sinr` / `throughput` 核心指标|
 
+## 接口 7：实时增量监测数据
+
+GET /api/data/realtime?last\_time=2026\-10\-06 00:00:00
+
+可选参数:
+
+- `last_time`：上次拉取的最大时间戳，格式 `yyyy-MM-dd HH:mm:ss`；不传则默认返回最近 10 条数据
+
+响应:
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "total": 3,
+    "columns": ["timestamp", "ap_id", "user_id", "rsrp", "sinr", "throughput", "network_status"],
+    "records": [
+      {"timestamp": "2026-10-06 18:00:00", "ap_id": "AP-01", "user_id": "UE-03", "rsrp": -91.2, "sinr": 6.3, "throughput": 54.7, "network_status": "normal"},
+      {"timestamp": "2026-10-06 18:00:00", "ap_id": "AP-02", "user_id": "UE-05", "rsrp": -94.8, "sinr": 5.7, "throughput": 49.2, "network_status": "normal"},
+      {"timestamp": "2026-10-06 18:00:00", "ap_id": "AP-03", "user_id": "UE-07", "rsrp": -89.5, "sinr": 7.1, "throughput": 59.8, "network_status": "congestion"}
+    ]
+  }
+}
+```
+
+### 接口 7 字段说明
+
+|字段|类型|说明|
+|---|---|---|
+|total|int|本次返回的增量数据条数|
+|columns|array|字段名列表，与历史查询接口完全一致，可复用前端解析逻辑|
+|records|array|增量数据数组，所有数据的时间戳均大于请求传入的 `last_time`|
+
+**错误码说明**：
+
+- `0`：成功
+
+- `40002`：参数错误，时间格式非法
+
+- `50001`：服务端内部异常
