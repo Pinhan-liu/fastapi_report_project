@@ -7,12 +7,14 @@ Base URL: http://localhost:8000
 
 ## 接口总览
 
-| 接口 | 方法 | 路径 | 用途 |
+|接口|方法|路径|用途|
 |---|---|---|---|
-| 1 | GET | /api/data/query | 查询监测数据 |
-| 2 | POST | /api/analyze/anomaly | 多KPI联合故障研判 |
-| 3 | POST | /api/agent/chat | 自然语言对话 |
-| 4 | POST | /api/export/report | 导出分析报告 |
+|1|GET|/api/data/query|查询监测数据|
+|2|POST|/api/analyze/anomaly|多 KPI 联合故障研判|
+|3|POST|/api/agent/chat|自然语言对话|
+|4|POST|/api/export/report|导出分析报告|
+|5|GET|/api/data/heatmap|信号热力图数据|
+|6|GET|/api/network/topology/basic|基础网络拓扑数据|
 
 ## 通用响应格式
 
@@ -181,3 +183,71 @@ POST /api/export/report
     "file_url": "/download/reports/RPT_20260928_01.md"
   }
 }
+## 接口 5：信号热力图数据
+
+GET /api/data/heatmap?scenario = 校园 \& start\_time=2026\-01\-01 00:00:00\&end\_time=2026\-01\-03 23:59:59\&metric=rsrp
+
+可选参数:
+
+- `start_time` / `end_time`：时间范围，不传则覆盖全量数据
+
+- `metric`：热力指标，可选 `rsrp` / `sinr`，默认 `rsrp`
+
+响应:
+\{
+"code": 0,
+"message": "success",
+"data": \{
+"metric": "rsrp",
+"grid\_count": 3,
+"values": \[
+\[120, 220, \-92\.54\],
+\[380, 160, \-92\.51\],
+\[260, 350, \-92\.27\]
+\]
+\}
+\}
+
+### 接口 5 字段说明
+
+|字段|类型|说明|
+|---|---|---|
+|metric|string|本次热力图的指标类型|
+|grid\_count|int|网格点位总数|
+|values|array|网格点位数组，每项格式为 `[x坐标, y坐标, 指标均值]`，可直接接入 ECharts heatmap 渲染|
+
+## 接口 6：基础网络拓扑数据
+
+GET /api/network/topology/basic?scenario = 校园 \& timestamp=2026\-01\-01 00:00:00
+
+可选参数:
+
+- `timestamp`：指定时刻，不传则默认取第一条数据的时刻
+
+响应:
+\{
+"code": 0,
+"message": "success",
+"data": \{
+"timestamp": "2026\-01\-01 00:00:00",
+"nodes": \[
+\{"id": "AP\-01", "type": "ap", "x": 120, "y": 220\},
+\{"id": "UE\-01", "type": "ue", "x": 94\.8, "y": 192\.62\},
+\{"id": "AP\-02", "type": "ap", "x": 380, "y": 160\},
+\{"id": "UE\-02", "type": "ue", "x": 372\.32, "y": 129\.2\}
+\],
+"links": \[
+\{"source": "AP\-01", "target": "UE\-01", "rsrp": \-92\.5, "sinr": 10\.2, "throughput": 128\.5\},
+\{"source": "AP\-02", "target": "UE\-02", "rsrp": \-91\.8, "sinr": 11\.5, "throughput": 135\.2\}
+\]
+\}
+\}
+
+### 接口 6 字段说明
+
+|字段|类型|说明|
+|---|---|---|
+|timestamp|string|本次拓扑对应的时刻|
+|nodes|array|节点列表，包含 AP 与 UE 两类；每项含 `id` / `type` / `x` / `y`|
+|links|array|AP\-UE 连接链路列表；每项含两端节点 ID 及 `rsrp` / `sinr` / `throughput` 核心指标|
+
