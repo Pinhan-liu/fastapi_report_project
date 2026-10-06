@@ -23,3 +23,8 @@ Thumbs.db
 *.log
 tmp/
 temp/
+
+#忽略报告目录
+reports/
+__pycache__/
+*.pyc

@@ -18,6 +18,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from datetime import datetime
+from fastapi.staticfiles import StaticFiles
 
 # ======================
 # 统一错误码定义（与api.md文档严格对齐）
@@ -52,6 +53,13 @@ def error_response(code: int, message: str, data=None):
 
 app = FastAPI()
 
+# ===== 新增：挂载报告下载静态目录 =====
+import os
+# 自动创建reports目录，避免不存在报错
+os.makedirs("reports", exist_ok=True)
+# 挂载静态目录，路径和返回的file_url前缀保持一致
+app.mount("/download/reports", StaticFiles(directory="reports"), name="download_reports")
+# ==================================
 
 # 全局参数校验异常处理：统一返回格式
 @app.exception_handler(RequestValidationError)
@@ -654,16 +662,43 @@ class ReportRequest(BaseModel):
 @app.post("/api/export/report")
 def export_report(req: ReportRequest):
     # 第一周：只生成报告编号与下载路径；第3周接入真实报告生成
-    report_id = "RPT_" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    ext = "md" if req.format in ("md", "markdown") else "html"
-    return {
-        "code": 0,
-        "message": "success",
-        "data": {
+        # ===== 新增：参数合法性校验 =====
+    if not req.scenario or not req.scenario.strip():
+        return error_response(ERROR_CODE["PARAM_MISSING"], "场景参数不能为空")
+    if not req.start_time or not req.end_time:
+        return error_response(ERROR_CODE["PARAM_MISSING"], "时间参数不能为空")
+        # ==============================
+        report_id = "RPT_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+        ext = "md" if req.format in ("md", "markdown") else "html"
+        filename = f"{report_id}.{ext}"
+        file_path = f"reports/{filename}"
+
+        # ===== 新增：生成真实报告内容并写入文件 =====
+        # 1. 拉取对应范围的数据
+        rows = filter_rows(req.scenario, req.start_time, req.end_time)
+
+        # 2. 组装md报告内容
+        content = f"""# 网络分析报告
+    - 报告ID：{report_id}
+    - 场景：{req.scenario}
+    - 时间范围：{req.start_time} 至 {req.end_time}
+
+    ## 数据概览
+    - 总采样条数：{len(rows)}
+    - 平均RSRP：{avg(rows, 'rsrp'):.1f} dBm
+    - 平均SINR：{avg(rows, 'sinr'):.1f} dB
+    - 平均吞吐量：{avg(rows, 'throughput'):.1f} Mbps
+    """
+
+        # 3. 写入文件
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+        # ============================================
+
+        return success_response({
             "report_id": report_id,
-            "file_url": f"/download/reports/{report_id}.{ext}",
-        },
-    }
+            "file_url": f"/download/reports/{filename}"
+        })
 
 # ========== 热力图数据接口 ==========
 @app.get("/api/data/heatmap", summary="信号热力图数据")
