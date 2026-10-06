@@ -1,0 +1,169 @@
+.ain-spatial-chart {
+  display: flex;
+  flex-direction: column;
+}
+
+.ain-spatial-stage {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  flex: 1;
+  min-height: 260px;
+  background: #171d30;
+}
+
+.ain-spatial-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.ain-spatial-empty {
+  color: #b5c7d5;
+  padding: 32px 18px;
+  font-size: 12px;
+}
+
+.ain-scene-axes line {
+  stroke: #2a3449;
+  stroke-width: 1;
+}
+
+.ain-scene-axes text {
+  fill: #b5c7d5;
+  font-size: 12px;
+}
+
+.ain-scene-node {
+  cursor: pointer;
+  outline: none;
+}
+
+.ain-scene-node text {
+  font-size: 15px;
+  font-weight: 600;
+  paint-order: stroke;
+  stroke: #171d30;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+.ain-scene-node:focus-visible .ain-node-hit-area {
+  stroke: #fff;
+  stroke-width: 2;
+}
+
+.ain-radio-value {
+  fill: #c9dce6;
+  font-size: 13px;
+  paint-order: stroke;
+  stroke: #171d30;
+  stroke-width: 3px;
+  pointer-events: none;
+}
+
+.ain-topology-link {
+  stroke: #587084;
+  stroke-width: 2;
+  opacity: 0.45;
+}
+
+.ain-topology-link.is-active {
+  stroke: #efab65;
+  stroke-width: 3;
+  opacity: 1;
+}
+
+.ain-spatial-footer {
+  padding: 11px 12px;
+  border-top: 1px solid #dce6e8;
+  color: #74888f;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.ain-spatial-footer p + p {
+  margin-top: 5px;
+}
+
+.ain-signal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin-bottom: 7px;
+}
+
+.ain-signal-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.ain-signal-legend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ain-spatial-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-bottom: 6px;
+}
+
+.ain-spatial-key span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ain-spatial-key i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+}
+
+.ain-key-ap {
+  background: #7ec7bc;
+  border-radius: 2px;
+}
+
+.ain-key-ue {
+  border: 1.5px solid #8eb8d0;
+  border-radius: 50%;
+}
+
+.ain-key-selected {
+  border: 2px solid #efab65;
+  border-radius: 50%;
+}
+
+.ain-ap-focus h3 {
+  margin-bottom: 7px;
+}
+
+.ain-ap-focus p {
+  color: #66828b;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.ain-ap-ue-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.ain-ap-clear {
+  margin-top: 10px;
+}
+
+@media (max-width: 760px) {
+  .ain-spatial-stage {
+    min-height: 220px;
+  }
+}

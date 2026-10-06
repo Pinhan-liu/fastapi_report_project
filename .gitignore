@@ -24,6 +24,13 @@ Thumbs.db
 tmp/
 temp/
 
+# Frontend（前端）
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.env
+/frontend/.env.*
+!/frontend/.env.example
+/frontend/*.log
 #忽略报告目录
 reports/
 __pycache__/

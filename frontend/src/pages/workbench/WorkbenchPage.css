@@ -1,0 +1,497 @@
+/* 解除默认模板对页面宽度的限制。 */
+body:has(.ain-app) {
+  display: block;
+  margin: 0;
+}
+
+#root:has(.ain-app) {
+  max-width: none;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.ain-app {
+  min-height: 100vh;
+  background: #f1f7f6;
+  color: #253e46;
+  color-scheme: light;
+  font-family: Inter, "Microsoft YaHei", system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+.ain-app * {
+  box-sizing: border-box;
+}
+
+.ain-app h1,
+.ain-app h2,
+.ain-app h3,
+.ain-app p {
+  margin: 0;
+}
+
+.ain-app h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ain-app h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ain-muted {
+  color: #74888f;
+  font-size: 13px;
+}
+
+.ain-eyebrow {
+  color: #187c79;
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-bottom: 8px !important;
+}
+
+.ain-button {
+  border: 1px solid #d5e2e4;
+  border-radius: 9px;
+  background: #fff;
+  color: #35545c;
+  padding: 9px 14px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.ain-button:hover:not(:disabled) {
+  border-color: #187c79;
+  color: #187c79;
+}
+
+.ain-button:disabled {
+  color: #97a9af;
+  background: #f8faf9;
+  cursor: not-allowed;
+}
+
+.ain-primary {
+  background: #187c79;
+  color: #fff;
+  border-color: #187c79;
+}
+
+.ain-primary:hover:not(:disabled) {
+  color: #fff;
+  background: #136764;
+}
+
+.ain-app a:focus-visible,
+.ain-app button:focus-visible,
+.ain-app select:focus-visible {
+  outline: 2px solid #187c79;
+  outline-offset: 3px;
+}
+
+.ain-workbench {
+  max-width: 1760px;
+  margin: 0 auto;
+  padding: 30px 28px 38px;
+}
+
+.ain-page-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 22px;
+}
+
+.ain-page-heading h1 {
+  font-size: 26px;
+  line-height: 1.35;
+  margin-bottom: 8px;
+}
+
+.ain-heading-controls {
+  display: flex;
+  gap: 9px;
+  flex-shrink: 0;
+}
+
+.ain-data-bar {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  flex-wrap: wrap;
+  padding: 13px 16px;
+  background: #fff;
+  border: 1px solid #dce6e8;
+  border-radius: 11px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  color: #71858e;
+}
+
+.ain-source-badge {
+  color: #187c79;
+  background: #e7f2ef;
+  padding: 4px 9px;
+  border-radius: 6px;
+}
+
+.ain-data-bar label {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ain-data-bar select {
+  color: #29454d;
+  background: #fff;
+  border: 1px solid #d5e2e4;
+  border-radius: 7px;
+  padding: 6px 10px;
+  font-family: inherit;
+}
+
+.ain-workbench-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    clamp(290px, 25vw, 350px);
+  gap: 20px;
+  align-items: start;
+}
+
+.ain-workbench-grid.ain-panel-closed {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ain-data-column {
+  min-width: 0;
+}
+
+.ain-summary-slot,
+.ain-evidence-slot {
+  background: #fff;
+  border: 1px solid #dce6e8;
+  border-radius: 12px;
+  padding: 17px 18px;
+}
+
+.ain-summary-slot {
+  margin-bottom: 16px;
+}
+
+.ain-summary-slot p,
+.ain-evidence-slot p {
+  margin-top: 7px;
+}
+
+.ain-main-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2.7fr)
+    minmax(170px, 1fr);
+  gap: 14px;
+}
+
+.ain-large-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ain-small-charts {
+  display: grid;
+  gap: 12px;
+}
+
+.ain-chart-slot {
+  border: 1px solid #dce6e8;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+  min-width: 0;
+}
+
+.ain-slot-heading {
+  padding: 13px 14px;
+}
+
+.ain-slot-heading p {
+  color: #74888f;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.ain-slot-body {
+  min-height: 280px;
+  display: grid;
+  place-items: center;
+  color: #a4b9c5;
+  font-size: 12px;
+  background-color: #171d30;
+  background-image:
+    linear-gradient(#ffffff06 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff06 1px, transparent 1px);
+  background-size: 36px 36px;
+}
+
+.ain-small-charts .ain-slot-heading {
+  padding: 9px 12px;
+}
+
+.ain-small-charts h2 {
+  font-size: 13px;
+}
+
+.ain-small-charts .ain-slot-body {
+  min-height: 58px;
+}
+
+.ain-evidence-slot {
+  margin-top: 16px;
+}
+
+.ain-trend-slot {
+  margin-top: 16px;
+}
+
+.ain-trend-slot .ain-slot-body {
+  min-height: 160px;
+}
+
+.ain-side-panel {
+  position: sticky;
+  top: 20px;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #dce6e8;
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.ain-panel-heading span {
+  display: block;
+  color: #82969d;
+  font-size: 11px;
+  margin-top: 3px;
+}
+
+.ain-object-details {
+  background: #e9f3f0;
+  border-radius: 9px;
+  padding: 13px;
+  margin: 16px 0;
+}
+
+.ain-object-details dl {
+  margin: 9px 0 0;
+  font-size: 12px;
+}
+
+.ain-object-details dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 7px 0;
+}
+
+.ain-object-details dt {
+  color: #778d94;
+  flex-shrink: 0;
+}
+
+.ain-object-details dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.ain-input-label {
+  display: block;
+  font-size: 12px;
+  margin: 15px 0 7px;
+}
+
+.ain-side-panel textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 11px;
+  border: 1px solid #dce6e8;
+  border-radius: 9px;
+  background: #f8faf9;
+  color: #73888f;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.ain-side-panel > button {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.ain-management-slot {
+  border-top: 1px solid #e3ebec;
+  padding-top: 17px;
+  margin-top: 20px;
+}
+
+.ain-management-slot p {
+  margin: 8px 0 12px;
+}
+
+.ain-management-slot button {
+  width: 100%;
+}
+
+.ain-bottom-actions {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding: 14px 16px;
+  border: 1px solid #dce6e8;
+  border-radius: 11px;
+  background: #fff;
+}
+
+.ain-bottom-actions span {
+  margin-left: auto;
+  font-size: 11px;
+}
+
+.ain-load-state {
+  padding: 16px;
+  background: #e8f3ef;
+  border-radius: 9px;
+  margin-bottom: 18px !important;
+  font-size: 13px;
+}
+
+.ain-error {
+  padding: 16px;
+  background: #fff2ed;
+  border: 1px solid #efcfc2;
+  border-radius: 9px;
+  margin-bottom: 18px;
+  font-size: 13px;
+  color: #93573d;
+}
+
+.ain-error button {
+  margin-top: 10px;
+}
+
+.ain-home {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 80px 28px;
+}
+
+.ain-home h1 {
+  font-size: 42px;
+  line-height: 1.35;
+  margin: 14px 0 20px;
+}
+
+.ain-home-description {
+  color: #71858e;
+  max-width: 660px;
+  font-size: 16px;
+}
+
+.ain-home > button {
+  margin-top: 28px;
+}
+
+.ain-home-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+  margin-top: 56px;
+}
+
+.ain-home-flow article {
+  border-top: 1px solid #cfdfdd;
+  padding-top: 17px;
+}
+
+.ain-home-flow p {
+  margin-top: 9px;
+}
+
+.ain-footer {
+  border-top: 1px solid #dce6e8;
+  padding: 18px 28px;
+  color: #80949c;
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+@media (max-width: 1150px) {
+  .ain-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ain-small-charts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ain-data-bar label {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  .ain-workbench {
+    padding: 22px 18px;
+  }
+
+  .ain-workbench-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ain-side-panel {
+    position: static;
+  }
+
+  .ain-page-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ain-large-charts,
+  .ain-small-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ain-home {
+    padding: 48px 22px;
+  }
+
+  .ain-home h1 {
+    font-size: 30px;
+  }
+
+  .ain-home-flow {
+    grid-template-columns: 1fr;
+    gap: 25px;
+  }
+
+  .ain-footer {
+    flex-direction: column;
+  }
+
+  .ain-bottom-actions span {
+    margin-left: 0;
+  }
+}

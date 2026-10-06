@@ -1,0 +1,229 @@
+/* 网站外层 */
+.app-shell {
+  min-height: 100vh;
+  background: var(--color-background);
+}
+
+/* 顶部导航 */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px;
+
+  padding: 18px 28px;
+  background: var(--color-panel);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+.app-brand-mark {
+  display: grid;
+  place-items: center;
+
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+
+  background: var(--color-primary);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.app-brand-name {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.app-navigation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-nav-button {
+  padding: 9px 14px;
+  border: none;
+  border-radius: 8px;
+
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.app-nav-button:hover {
+  background: var(--color-primary-light);
+}
+
+.app-nav-button.is-active {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+}
+
+.app-stage {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+/* 页面内容 */
+.app-main {
+  padding: 26px 28px;
+}
+
+.page-heading {
+  margin-bottom: 22px;
+}
+
+.page-eyebrow {
+  margin-bottom: 7px;
+  color: var(--color-primary);
+  font-size: 12px;
+  letter-spacing: 1.5px;
+}
+
+.page-title {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.page-description {
+  margin-top: 9px;
+  color: var(--color-muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+/* 横屏：左侧数据区域，右侧管理区域 */
+.workbench-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(280px, 24vw, 360px);
+  gap: 20px;
+  align-items: start;
+}
+
+.workbench-data,
+.workbench-management {
+  min-width: 0;
+}
+
+.workbench-large-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* 公共面板 */
+.surface-panel {
+  background: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.panel-heading {
+  padding: 17px 18px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* 图表位置占位，后续替换为实际图表 */
+.chart-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  min-height: 330px;
+  padding: 20px;
+
+  background: var(--color-chart);
+  color: #c1cddd;
+}
+
+.chart-placeholder span {
+  color: #91a4bd;
+  font-size: 12px;
+  text-align: center;
+}
+
+.evidence-placeholder {
+  margin-top: 16px;
+  padding: 20px;
+}
+
+.evidence-placeholder p {
+  margin-top: 10px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.management-placeholder {
+  padding: 20px;
+}
+
+.management-placeholder h2 {
+  font-size: 17px;
+}
+
+.management-section {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.management-section:last-child {
+  border-bottom: none;
+}
+
+.management-section h3 {
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.management-section p {
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.simple-page-panel {
+  padding: 28px;
+  color: var(--color-muted);
+  line-height: 1.8;
+}
+
+/* 小屏才改为上下排列，电脑端保留左右布局 */
+@media (max-width: 760px) {
+  .app-header {
+    padding: 16px;
+  }
+
+  .app-main {
+    padding: 20px 16px;
+  }
+
+  .workbench-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-stage {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .workbench-large-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
