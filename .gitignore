@@ -31,3 +31,7 @@ temp/
 /frontend/.env.*
 !/frontend/.env.example
 /frontend/*.log
+#忽略报告目录
+reports/
+__pycache__/
+*.pyc
