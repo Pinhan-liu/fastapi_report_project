@@ -19,6 +19,7 @@ Base URL: http://localhost:8000
 成功: {"code": 0, "message": "success", "data": {...}}
 失败: {"code": 40001, "message": "参数错误：缺少scenario", "data": null}
 
+
 错误码约定:
 |错误码|类型|说明|
 |---|---|---|
@@ -28,9 +29,16 @@ Base URL: http://localhost:8000
 |40003|参数错误|参数值超出合法范围|
 |50001|服务端错误|服务内部异常|
 
+
+
+
 ## 接口1：查询监测数据
 GET /api/data/query?scenario=校园&start_time=2026-09-28 00:00:00&end_time=2026-09-28 23:59:59&ap_id=AP-01&limit=100
 可选参数: metrics=rsrp,sinr,throughput（不传则返回全部KPI列）
+ offset: 分页偏移量，默认0，从第0条开始
+limit: 单页最大条数，默认100，最大1000
+ metrics: 返回字段裁剪，逗号分隔，如 rsrp,sinr,throughput；不传则返回全部18列
+
 
 响应:
 ```json
@@ -47,6 +55,7 @@ GET /api/data/query?scenario=校园&start_time=2026-09-28 00:00:00&end_time=2026
   }
 }
 ```
+说明：`total` 为符合筛选条件的总记录数，不受分页参数影响，用于前端计算总页数。
 
 ## 接口 2：多 KPI 联合故障研判
 
@@ -316,3 +325,15 @@ GET /api/data/realtime?last\_time=2026\-10\-06 00:00:00
 - `40002`：参数错误，时间格式非法
 
 - `50001`：服务端内部异常
+
+
+
+### 降级机制
+1.  关键词规则优先匹配，不依赖LLM即可完成意图识别
+2.  未命中关键词、输入模糊时，默认兜底为 `query_kpi`（KPI概况查询）
+3.  LLM不可用时，自动降级为关键词规则+兜底逻辑，核心功能可用
+
+### chart 图表类型
+- `line`：折线趋势图，对应故障研判场景
+- `heatmap`：热力图，对应信号分布场景
+- `graph`：关系图，对应网络拓扑场景
