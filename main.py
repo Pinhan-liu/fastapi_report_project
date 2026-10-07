@@ -12,6 +12,7 @@ import statistics
 from pathlib import Path
 import llm_agent
 from llm_agent import get_intent, rule_intent
+from forecast_model import build_series, DEFAULT_METRICS
 from realtime_simulator import start_realtime_service, get_incremental_data, DATA_COLUMNS
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
@@ -111,9 +112,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ============ 数据源：唐苗仿真数据集（12960条，18列） ============
+# ============ 数据源：唐苗仿真数据集 ============
+# 默认 30d（129600条，18列，P1 预测训练数据量充足）；3d 版备份为 network_data_3d_bak.csv
 # 注意：表头首列带 BOM（\ufefftimestamp），必须用 utf-8-sig 读取
-DATA_PATH = Path(__file__).resolve().parent / "data" / "network_data.csv"
+DATA_PATH = Path(__file__).resolve().parent / "data" / "network_data_30d(1).csv"
 
 def load_data():
     if not DATA_PATH.exists():
@@ -840,98 +842,42 @@ def api_get_realtime_data(last_time: str = None):
     }
 
 
-# ========== 接口5：真实 vs 预测 对比（移动平均 baseline，供"信号/频谱态势预测"演示） ==========
+# ========== 接口5：区域信号/频谱态势预测（Prophet 时序模型，P1 任务1） ==========
 class ForecastRequest(BaseModel):
     scenario: str = "校园"
     window_start: str = "2026-01-01 00:00:00"
     window_end: str = "2026-01-03 23:59:59"
 
 
-@app.post("/api/analyze/forecast", summary="真实 vs 预测 对比（移动平均 baseline）")
+@app.post("/api/analyze/forecast", summary="区域信号/频谱态势预测（Prophet 时序模型）")
 def analyze_forecast(req: ForecastRequest):
     """
     对每个 UE × 指标（rsrp/sinr/throughput）：
-    1. 按 10 分钟桶聚合实测序列；
-    2. 前 60% 作为训练段，用移动平均(窗口3) 预测后 40% 测试段；
-    3. 输出 测试段实测均值(True) vs 预测均值(Predicted) 与 MAPE。
-    后续可替换为 Prophet / LSTM 接入机器学习模型，本接口仅作链路打通 baseline。
+    1. 按 1 小时桶聚合实测序列（forecast_model.aggregate_hourly）；
+    2. 前 80% 训练 Prophet，后 20% 测试 → 测试段实测均值(True) vs 预测均值(Predicted) 与 MAPE；
+    3. 测试段之后再延伸 24 小时未来预测，输出 yhat/lower/upper 置信区间。
+    容错：序列过短或 Prophet 失败自动降级 moving_average，接口永不崩。
+    答辩口径：统一表述为"区域信号/频谱态势预测"，前端预测部分标注"未来预测"。
     """
     rows = filter_rows(req.scenario, req.window_start, req.window_end)
-    metrics = ["rsrp", "sinr", "throughput"]
-    ues = sorted({r["user_id"] for r in rows})
-    if not rows or not ues:
+    metrics = DEFAULT_METRICS
+    if not rows:
         return success_response({
             "scenario": req.scenario, "window_start": req.window_start,
-            "window_end": req.window_end, "method": "moving_average",
+            "window_end": req.window_end, "method": "prophet",
             "metrics": metrics, "ues": [], "series": {}
         })
 
-    import collections
-    # 1. 按 UE × 指标 × 10分钟桶 聚合均值（保持时间升序）
-    def bin_key(ts):
-        try:
-            dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
-        except ValueError:
-            return None
-        return dt.replace(minute=dt.minute // 10 * 10, second=0).strftime("%Y-%m-%d %H:%M")
-
-    buckets = collections.defaultdict(lambda: collections.defaultdict(list))
-    for r in rows:
-        k = bin_key(r["timestamp"])
-        if k is None:
-            continue
-        ue = r["user_id"]
-        for m in metrics:
-            try:
-                buckets[ue][m].append((k, float(r[m])))
-            except (KeyError, TypeError, ValueError):
-                continue
-
-    def _ma_forecast(values):
-        """移动平均(win=3)：用训练段最后 3 个桶均值作为对测试段的恒定预测"""
-        n = len(values)
-        if n < 4:
-            return None, None, None
-        split = max(2, int(n * 0.6))
-        train = values[:split]
-        test = values[split:]
-        ma = train[-3:] if len(train) >= 3 else train
-        pred = sum(ma) / len(ma)
-        true = sum(test) / len(test)
-        denom = max(abs(true), 1e-6)
-        mape = abs(true - pred) / denom * 100
-        return round(true, 2), round(pred, 2), round(min(mape, 999.0), 2)
-
-    series = {}
-    for ue in ues:
-        series[ue] = {}
-        for m in metrics:
-            seq = buckets[ue][m]
-            if len(seq) < 4:
-                series[ue][m] = {"true_mean": None, "pred_mean": None, "mape": None, "bins": [], "true": [], "predicted": []}
-                continue
-            # 真正按 10 分钟桶聚合均值，再按时间排序成序列
-            grouped = {}
-            for k, v in seq:
-                grouped.setdefault(k, []).append(v)
-            agg = sorted((k, sum(vs) / len(vs)) for k, vs in grouped.items())
-            bins = [k for k, _ in agg]
-            vals = [v for _, v in agg]
-            true, pred, mape = _ma_forecast(vals)
-            series[ue][m] = {
-                "true_mean": true, "pred_mean": pred, "mape": mape,
-                "bins": bins, "true": [round(v, 2) for v in vals], "predicted": []
-            }
-
+    built = build_series(rows, metrics)
     return success_response({
         "scenario": req.scenario,
         "window_start": req.window_start,
         "window_end": req.window_end,
-        "method": "moving_average(win=3)",
-        "bin_size_min": 10,
-        "metrics": metrics,
-        "ues": ues,
-        "series": series
+        "method": "prophet",
+        "bin_size_min": built["bin_size_min"],
+        "metrics": built["metrics"],
+        "ues": built["ues"],
+        "series": built["series"]
     })
 
 
