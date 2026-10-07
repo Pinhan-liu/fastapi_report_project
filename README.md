@@ -100,8 +100,27 @@ npm run dev
 | 4    | POST | /api/export/report    | 导出分析报告                                                 |
 | 5    | POST | /api/analyze/forecast | 真实 vs 预测对比：移动平均 baseline（10 分钟桶 · 前 60% 训练 / 后 40% 测试 · 输出 True / Predicted / MAPE）；Prophet / LSTM 待接入 |
 | 6    | GET  | /api/network/topology/basic | 网络拓扑：AP / UE 位置与连接关系（已带坐标） |
+| 8    | GET  | /api/predict/result | 时序预测结果查询（契约 v1 · 占位实现，待 Prophet/LSTM 接入） |
+| 9    | GET  | /api/network/topology/enhanced | 拓扑增强数据（契约 v1：AP/UE 属性 + 链路多指标 + 整体统计） |
 
 详细请求 / 响应格式见 [docs/api.md](docs/api.md)。
+
+### P1 新增接口契约（v1 · 已冻结）
+
+> 契约版本说明：接口 8 / 9 契约 v1 已冻结。占位实现阶段字段结构保持不变；后续字段变更需走契约评审并升级契约版本（详见 [docs/api.md](docs/api.md) 接口 8 / 9 章节）。
+
+#### 接口 8：时序预测结果查询（GET /api/predict/result）
+
+* 请求参数：`scenario`（必填）、`start_time` / `end_time`（必填，yyyy-MM-dd HH:mm:ss）、`target_type`（ap/ue，必填）、`target_id`（可选）、`metric`（rsrp/sinr/throughput，必填）、`interval`（可选，默认 15min）
+* 返回字段：`predict_list[]` 每项含 `time` / `position` / `predict_value` / `confidence_min` / `confidence_max` / `status`；另含 `model`（placeholder → prophet/lstm）与 `total`
+* 状态标注：`normal`（正常）/ `warning`（预警）/ `abnormal`（异常）
+* 当前状态：**占位实现**——返回空 `predict_list`、`model="placeholder"`，字段契约保持稳定，前端可先行联调；Prophet / LSTM 模型就绪后替换内部逻辑
+
+#### 接口 9：拓扑增强数据（GET /api/network/topology/enhanced）
+
+* 请求参数：`scenario`（必填）、`time`（可选，默认最新时刻）、`include_metrics`（可选，默认 true）
+* 返回字段：`nodes[]`（AP 带 `rsrp_avg` / `prb_usage` / `active_users` 属性，UE 带 `rsrp` / `sinr` / `throughput` 当前指标）+ `links[]`（`metrics` 含 rsrp / sinr / throughput / latency / packet_loss）+ `stats`（节点数 / 链路数 / 平均 RSRP / SINR）
+* 当前状态：契约 v1 已冻结，待后端实现
 
 ## 数据字典（CSV 格式，18 列）
 
@@ -133,7 +152,9 @@ AI-NetTune/
 ├── main.py          # 后端主程序（FastAPI，接口 1-4 已实现 + 接口 5 时序预测开发中）
 ├── data_generator.py # 仿真数据生成器（v2.3：多日 + 坐标 + 故障注入 + SINR 限幅）
 ├── data/
-│   └── network_data.csv # 唐苗仿真数据集（12960 条，18 列，多日时间跨度 + 坐标 + 故障注入）
+│   ├── network_data.csv # 唐苗仿真数据集（3 天，12960 条，18 列，坐标 + 故障注入）
+│   ├── network_data_7d.csv # 长周期数据集（7 天，30240 条，供 Prophet/LSTM 训练）
+│   └── network_data_30d.csv # 长周期数据集（30 天，129600 条，供 Prophet/LSTM 训练）
 ├── docs/
 │   ├── api.md       # API 接口契约文档
 │   └── data_dict.md # 数据字典契约文档（18 维字段规范）

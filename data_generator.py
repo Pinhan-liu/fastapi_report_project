@@ -1,5 +1,5 @@
 """
-仿真数据生成器 v2.3（程思源修复版）
+仿真数据生成器 v2.4（唐苗数据扩展版，基于程思源 v2.3）
 项目：AI-NetTune 多模态无线网络智能监测平台
 设计思路：
 - 固定AP点位 + UE随机位置，模拟用户移动
@@ -13,12 +13,18 @@ v2.3 修复（相对 v2.2）：
 2. START_TIME 改回 2026-01-01 —— 与 main.py 默认窗口一致
 3. 新增 FAULT_SCHEDULE 故障注入 —— 保证演示时有弱覆盖/拥塞异常可报
 4. SINR 限幅至 [-10, 30] —— 修复 v2.2 SINR 峰值 67.84 的异常
+v2.4 扩展（唐苗，支持 7/30 天长周期数据集）：
+1. TOTAL_DAYS 命令行参数化：--days 3/7/30，输出文件自动命名 network_data[_7d/_30d].csv
+2. 故障注入按周规律延伸：第4天起每2天一组故障（弱覆盖/拥塞交替、AP轮换），
+   保证全周期每天均有异常样本，异常占比与3天版（约8%）持平，供 Prophet/LSTM 训练
+3. 校验逻辑增强：新增按天故障分布统计，确认每天均有异常样本
 扩展说明：
 - 核心字段15个，保持接口契约不变
 - 末尾追加3个辅助字段，用于故障原因深度分析
 - DeepMIMO仅用于离线频谱预测验证，不接入主链路
 """
 
+import argparse
 import pandas as pd
 import numpy as np
 import random
@@ -29,7 +35,7 @@ from datetime import datetime, timedelta
 # ==================================================
 # ---------- 时间配置 ----------
 START_TIME = "2026-01-01 00:00:00"
-TOTAL_DAYS = 3                  # 生成总天数
+TOTAL_DAYS = 3                  # 默认生成总天数（命令行 --days 可覆盖：3/7/30）
 INTERVAL_MINUTES = 1            # 采样间隔（分钟）
 
 # ---------- 基站AP配置 ----------
@@ -71,13 +77,37 @@ FAULT_SCHEDULE = [
     ("2026-01-03 09:00:00", "2026-01-03 11:00:00", "AP-01", "congestion", 92.0),
 ]
 
+# ---------- 故障时间表扩展（v2.4） ----------
+def build_fault_schedule(total_days: int) -> list:
+    """按总天数构建完整故障注入时间表。
+    前3天保留 FAULT_SCHEDULE 原有4条（与申报书演示口径一致）；
+    第4天起每2天安排一组故障（弱覆盖/拥塞交替、AP轮换），
+    保证7/30天全周期每天均有异常样本，异常占比与3天版（约8%）持平。
+    """
+    schedule = list(FAULT_SCHEDULE)
+    start = datetime.strptime(START_TIME, "%Y-%m-%d %H:%M:%S")
+    aps = ["AP-02", "AP-03", "AP-01"]  # 轮换顺序，避开与原有条目完全重复
+    idx = 0
+    for day in range(4, total_days + 1):
+        date_str = (start + timedelta(days=day - 1)).strftime("%Y-%m-%d")
+        if day % 2 == 0:
+            # 偶数天：弱覆盖 10:00-12:00
+            ap = aps[idx % 3]
+            schedule.append((f"{date_str} 10:00:00", f"{date_str} 12:00:00", ap, "weak_coverage", 15.0))
+        else:
+            # 奇数天：拥塞 20:00-22:00
+            ap = aps[(idx + 1) % 3]
+            schedule.append((f"{date_str} 20:00:00", f"{date_str} 22:00:00", ap, "congestion", 92.0))
+        idx += 1
+    return schedule
+
 # ---------- UE配置 ----------
 UE_COUNT_PER_SLOT = 3          # 每个时刻同时在线用户数
 MAP_RANGE_X = (20, 480)        # 用户活动横向范围 米
 MAP_RANGE_Y = (20, 430)        # 用户活动纵向范围 米
 
 # ---------- 输出配置 ----------
-OUTPUT_PATH = "data/network_data.csv"
+OUTPUT_PATH = "data/network_data.csv"   # 默认输出；--days 7/30 时自动命名 _7d/_30d
 OUTPUT_ENCODING = "utf-8-sig"
 
 # ==================================================
@@ -259,7 +289,16 @@ def validate_and_export(df: pd.DataFrame):
     if len(cong_check_rsrp) == 0:
         print("拥塞标签与弱覆盖无重叠")
 
-    # 导出CSV
+    # v2.4 新增：按天故障样本分布（确认全周期每天都有异常样本）
+    df["_day"] = df["timestamp"].str[:10]
+    daily_fault = df[df["network_status"] != "normal"].groupby("_day").size()
+    no_fault_days = [d for d in df["_day"].unique() if d not in set(daily_fault.index)]
+    print(f"\n按天故障分布：共{df['_day'].nunique()}天，无异常样本的天数：{len(no_fault_days)} {no_fault_days[:5]}")
+    abnormal_ratio = (df["network_status"] != "normal").mean() * 100
+    print(f"全周期异常样本占比：{abnormal_ratio:.1f}%")
+
+    # 导出CSV（去掉临时统计列）
+    df = df.drop(columns=["_day"])
     df.to_csv(OUTPUT_PATH, index=False, encoding=OUTPUT_ENCODING)
     print(f"\n文件已导出：{OUTPUT_PATH}")
     print(f"字段列表：{list(df.columns)}")
@@ -268,10 +307,34 @@ def validate_and_export(df: pd.DataFrame):
 # ==================================================
 # 5. 程序入口
 # ==================================================
-if __name__ == "__main__":
+def parse_args():
+    """命令行参数：--days 生成天数(3/7/30)，--output 自定义输出路径"""
+    parser = argparse.ArgumentParser(description="AI-NetTune 仿真数据生成器 v2.4")
+    parser.add_argument("--days", type=int, default=3, choices=[3, 7, 30],
+                        help="生成总天数（3/7/30），默认3")
+    parser.add_argument("--output", type=str, default=None,
+                        help="自定义输出路径，默认按天数自动命名")
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    global TOTAL_DAYS, OUTPUT_PATH, FAULT_SCHEDULE
+    TOTAL_DAYS = args.days
+    if args.output:
+        OUTPUT_PATH = args.output
+    else:
+        suffix = {3: "", 7: "_7d", 30: "_30d"}.get(args.days, "")
+        OUTPUT_PATH = f"data/network_data{suffix}.csv"
+    FAULT_SCHEDULE = build_fault_schedule(TOTAL_DAYS)  # 按天数延伸故障时间表
+    print(f"[v2.4] 生成 {TOTAL_DAYS} 天数据，故障注入 {len(FAULT_SCHEDULE)} 条 → {OUTPUT_PATH}")
     dataset = generate_dataset()
     validate_and_export(dataset)
 
-    # 如果不需要校验，把上面一行替换成下面这行即可
+    # 如果不需要校验，把上面 validate_and_export 一行替换成下面这行即可
     # dataset.to_csv(OUTPUT_PATH, index=False, encoding=OUTPUT_ENCODING)
     # print("生成完成，文件已导出")
+
+
+if __name__ == "__main__":
+    main()

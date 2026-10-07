@@ -14,6 +14,8 @@ Base URL: http://localhost:8000
 |5|GET|/api/data/heatmap|信号热力图数据|
 |6|GET|/api/network/topology/basic|基础网络拓扑数据|
 |7|GET|/api/data/realtime|实时增量监测数据|
+|8|GET|/api/predict/result|时序预测结果查询（契约v1·占位实现）|
+|9|GET|/api/network/topology/enhanced|拓扑增强数据（契约v1）|
 
 ## 通用响应格式
 成功: {"code": 0, "message": "success", "data": {...}}
@@ -337,3 +339,124 @@ GET /api/data/realtime?last\_time=2026\-10\-06 00:00:00
 - `line`：折线趋势图，对应故障研判场景
 - `heatmap`：热力图，对应信号分布场景
 - `graph`：关系图，对应网络拓扑场景
+
+---
+
+## 接口 8：时序预测结果查询（预测结果接口契约 v1）
+
+GET /api/predict/result?scenario=校园&start_time=2026-01-04 00:00:00&end_time=2026-01-04 23:59:59&target_type=ap&target_id=AP-01&metric=rsrp
+
+功能：根据时间范围、预测对象与指标，返回时序预测结果（预测值、置信区间与状态标注）。
+当前为契约 v1 + 占位实现阶段：后端返回固定空结构，不接入真实预测模型；模型（Prophet/LSTM）就绪后替换内部逻辑，字段契约不变。
+
+### 请求参数
+
+|参数|类型|必填|说明|
+|---|---|---|---|
+|scenario|string|是|业务场景，如 校园（与 VALID_SCENARIOS 白名单一致）|
+|start_time|string|是|预测起始时间，格式 yyyy-MM-dd HH:mm:ss|
+|end_time|string|是|预测结束时间，格式 yyyy-MM-dd HH:mm:ss|
+|target_type|string|是|预测对象类型：ap / ue|
+|target_id|string|否|指定单个对象 ID（如 AP-01 / UE-01）；不传返回全部对象|
+|metric|string|是|预测指标：rsrp / sinr / throughput|
+|interval|string|否|预测结果聚合粒度，默认 15min（支持 5min / 15min / 30min / 60min）|
+
+### 响应
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "target_type": "ap",
+    "target_id": "AP-01",
+    "metric": "rsrp",
+    "model": "placeholder",
+    "predict_list": [
+      {
+        "time": "2026-01-04 00:00:00",
+        "position": "AP-01",
+        "predict_value": -88.5,
+        "confidence_min": -92.1,
+        "confidence_max": -85.2,
+        "status": "normal"
+      }
+    ],
+    "total": 96
+  }
+}
+```
+
+说明：占位实现阶段 `predict_list` 为空数组 `[]`、`total` 为 0、`model` 固定为 `"placeholder"`；字段结构保持契约不变，前端可先行对接联调。
+
+### 字段说明
+
+|字段|类型|说明|
+|---|---|---|
+|target_type / target_id|string|预测对象类型与标识，与请求参数一致|
+|metric|string|本次预测指标|
+|model|string|预测模型标识：占位阶段为 placeholder，接入 Prophet 后为 prophet、LSTM 后为 lstm|
+|predict_list|array|预测结果列表，每项含 time / position / predict_value / confidence_min / confidence_max / status|
+|predict_value|float|预测数值，单位同原指标（rsrp dBm、sinr dB、throughput Mbps）|
+|confidence_min / confidence_max|float|置信区间上下限，与预测值同单位|
+|status|string|状态标注：normal（正常）/ warning（预警）/ abnormal（异常），按预测值阈值判定|
+|total|int|本次返回的预测点数量|
+
+错误码：复用全局错误码体系——参数缺失 40001、格式非法 40002、范围越界 40003、服务异常 50001。
+
+## 接口 9：拓扑增强数据（拓扑增强接口契约 v1）
+
+GET /api/network/topology/enhanced?scenario=校园&time=2026-01-01 10:00:00
+
+功能：返回指定场景、时刻下的网络拓扑增强数据。在基础拓扑（nodes + links）之上，扩展 AP/UE 属性、链路多指标与整体统计，供前端拓扑增强视图与态势分析使用。
+
+### 请求参数
+
+|参数|类型|必填|说明|
+|---|---|---|---|
+|scenario|string|是|业务场景，如 校园|
+|time|string|否|指定时刻，格式 yyyy-MM-dd HH:mm:ss；不传默认取数据集最新时刻|
+|include_metrics|boolean|否|是否附加链路指标，默认 true|
+
+### 响应
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "timestamp": "2026-01-01 10:00:00",
+    "nodes": [
+      {
+        "id": "AP-01", "type": "ap", "x": 120.0, "y": 220.0,
+        "properties": {"rsrp_avg": -92.5, "prb_usage": 62.3, "active_users": 11}
+      },
+      {
+        "id": "UE-01", "type": "ue", "x": 94.8, "y": 192.62,
+        "properties": {"rsrp": -90.1, "sinr": 8.2, "throughput": 54.7}
+      }
+    ],
+    "links": [
+      {
+        "source": "AP-01", "target": "UE-01",
+        "metrics": {"rsrp": -90.1, "sinr": 8.2, "throughput": 54.7, "latency": 18.5, "packet_loss": 1.2}
+      }
+    ],
+    "stats": {"ap_count": 3, "ue_count": 3, "link_count": 3, "avg_rsrp": -91.2, "avg_sinr": 10.3}
+  }
+}
+```
+
+### 字段说明
+
+|字段|类型|说明|
+|---|---|---|
+|timestamp|string|本次拓扑对应的时刻|
+|nodes|array|节点列表，type 区分 ap / ue；x、y 为坐标（米）；properties 为扩展属性|
+|nodes[].properties|object|AP：rsrp_avg（平均信号强度）/ prb_usage（资源占用）/ active_users（活跃用户数）；UE：rsrp / sinr / throughput 当前指标|
+|links|array|AP-UE 连接链路；metrics 含 rsrp / sinr / throughput / latency / packet_loss 全量核心指标|
+|stats|object|整体统计：节点数、链路数、平均 RSRP / SINR，供态势概览|
+
+错误码：复用全局错误码体系——参数缺失 40001、格式非法 40002、范围越界 40003、服务异常 50001。
+
+> 契约状态说明：接口 8、接口 9 契约 v1 已冻结，后续模型接入（Prophet/LSTM）与前端联调均以本契约为准；字段变更需走契约评审。
