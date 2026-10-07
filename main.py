@@ -13,6 +13,7 @@ from pathlib import Path
 import llm_agent
 from llm_agent import get_intent, rule_intent
 from forecast_model import build_series, DEFAULT_METRICS
+from spatial_model import build_spatial
 from realtime_simulator import start_realtime_service, get_incremental_data, DATA_COLUMNS
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
@@ -685,10 +686,28 @@ def get_heatmap(
         return {
             "code": 0,
             "message": "success",
-            "data": {"metric": metric, "grid_count": 0, "values": []}
+            "data": {"metric": metric, "method": "grid_mean", "grid_count": 0,
+                     "values": [], "variance": None, "sample_points": 0}
         }
 
-    # 2. 按 UE 坐标 20m 网格聚合（与对话工具 tool_heatmap 口径一致），计算平均信号值
+    # 2. 空间估计：Kriging 插值（估计未测位置指标 + 方差置信度）
+    #    采样点不足或拟合失败时降级为旧逻辑"网格均值"（只输出有采样点的格子）
+    spatial = build_spatial(rows, metric)
+    if spatial["method"] == "kriging":
+        return {
+            "code": 0,
+            "message": "success",
+            "data": {
+                "metric": metric,
+                "method": "kriging",
+                "grid_count": spatial["grid_count"],
+                "values": spatial["values"],
+                "variance": spatial["variance"],
+                "sample_points": spatial["sample_points"],
+            }
+        }
+
+    # 3. 降级：按 UE 坐标 20m 网格聚合（与对话工具 tool_heatmap 口径一致），计算平均信号值
     x_min, x_max, y_min, y_max = 20.0, 480.0, 20.0, 430.0
     grid = 20.0
     nx = int((x_max - x_min) // grid) + 1
@@ -703,7 +722,7 @@ def get_heatmap(
         iy = min(int((uy - y_min) // grid), ny - 1)
         grid_map.setdefault((ix, iy), []).append(val)
 
-    # 3. 转成前端ECharts直接能用的格式（x/y 为网格中心坐标）
+    # 4. 转成前端ECharts直接能用的格式（x/y 为网格中心坐标）
     result = []
     for (ix, iy), values in grid_map.items():
         avg_val = sum(values) / len(values)
@@ -716,8 +735,11 @@ def get_heatmap(
         "message": "success",
         "data": {
             "metric": metric,
+            "method": "grid_mean",
             "grid_count": len(result),
-            "values": result
+            "values": result,
+            "variance": None,
+            "sample_points": spatial["sample_points"],
         }
     }
 

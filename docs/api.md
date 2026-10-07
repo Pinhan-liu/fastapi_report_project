@@ -213,7 +213,7 @@ POST /api/export/report
 }
 ```
 
-## 接口 5：信号热力图数据
+## 接口 5：信号热力图数据（含空间估计）
 
 GET /api/data/heatmap?scenario = 校园 \& start\_time=2026\-01\-01 00:00:00\&end\_time=2026\-01\-03 23:59:59\&metric=rsrp
 
@@ -223,7 +223,7 @@ GET /api/data/heatmap?scenario = 校园 \& start\_time=2026\-01\-01 00:00:00\&en
 
 - `metric`：热力指标，可选 `rsrp` / `sinr`，默认 `rsrp`
 
-响应:
+响应（method=kriging 时为空间估计升级版；采样点 <30 或拟合失败自动降级 method=grid_mean，字段结构一致）：
 
 ```json
 {
@@ -231,12 +231,19 @@ GET /api/data/heatmap?scenario = 校园 \& start\_time=2026\-01\-01 00:00:00\&en
   "message": "success",
   "data": {
     "metric": "rsrp",
-    "grid_count": 3,
+    "method": "kriging",
+    "grid_count": 504,
     "values": [
-      [120, 220, -92.54],
-      [380, 160, -92.51],
-      [260, 350, -92.27]
-    ]
+      [30, 30, -102.5],
+      [50, 30, -101.4],
+      [70, 30, -100.97]
+    ],
+    "variance": [
+      [30, 30, 44.08],
+      [50, 30, 43.37],
+      [70, 30, 44.32]
+    ],
+    "sample_points": 129600
   }
 }
 ```
@@ -246,8 +253,11 @@ GET /api/data/heatmap?scenario = 校园 \& start\_time=2026\-01\-01 00:00:00\&en
 |字段|类型|说明|
 |---|---|---|
 |metric|string|本次热力图的指标类型|
-|grid\_count|int|网格点位总数|
-|values|array|网格点位数组，每项格式为 `[x坐标, y坐标, 指标均值]`，可直接接入 ECharts heatmap 渲染|
+|method|string|预测方法：`kriging`（OrdinaryKriging 空间插值，估计未测位置指标）；采样点 <30 或拟合失败时为 `grid_mean`（旧逻辑，仅输出有采样点的网格均值）|
+|grid\_count|int|网格点位总数。kriging 为全区域网格（504=24×21，20m 网格）；grid_mean 为有采样点的格子数|
+|values|array|网格点位数组，每项格式为 `[x坐标, y坐标, 指标预测值]`，可直接接入 ECharts heatmap 渲染|
+|variance|array \| null|kriging 时与 values 等长的方差数组 `[x, y, 方差]`，即插值置信度（数值越小越可信）；grid_mean 时为 null|
+|sample\_points|int|参与插值的 UE 采样点数|
 
 ## 接口 6：基础网络拓扑数据
 
