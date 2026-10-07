@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { chatNetwork } from "../services/backend";
-import type { ChatResult } from "../types/backend";
+import type { ChatResult, QueryScope } from "../types/backend";
 
 export interface QueryEntry {
   id: number; question: string; answer: string; failed: boolean;
@@ -18,12 +18,12 @@ export default function useNetworkQuery() {
     setPending(false); setError(""); setResult(null);
   }, []);
   useEffect(() => () => { revision.current++; controller.current?.abort(); }, []);
-  async function submit(message: string, scenario: string) {
+  async function submit(message: string, scenario: string, window?: QueryScope) {
     if (!message.trim() || controller.current) return;
     const token = ++revision.current, abort = new AbortController();
     controller.current = abort; setPending(true); setError(""); setResult(null);
     try {
-      const response = await chatNetwork(message.trim(), scenario, abort.signal);
+      const response = await chatNetwork(message.trim(), scenario, window, abort.signal);
       if (revision.current !== token) return;
       setResult(response);
       setHistory(previous => [{ id: token, question: message.trim(), answer: response.reply,

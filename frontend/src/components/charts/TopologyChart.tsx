@@ -64,7 +64,7 @@ export default function TopologyChart({
               ? `关注 ${focusedApId}：高亮其服务连接。`
               : `分析 ${ueId || "未选择对象"}：高亮其服务连接。`}
           </p>
-          <p>点击 AP 查看连接；点击 UE 查看指标。线段仅表示服务关系。采样时刻：{data.metrics.at(-1)?.backendTime}（北京时间）。</p>
+          <p>点击 AP 查看连接；点击 UE 查看指标。连线为窗口内该 UE 主服务 AP（连接占比最高）。采样时刻：{data.metrics.at(-1)?.backendTime}（北京时间）。</p>
           {links.length < data.links.length && (
             <p>
               {data.links.length - links.length}{" "}
@@ -89,17 +89,28 @@ export default function TopologyChart({
             const active = focusedApId
               ? link.source === focusedApId
               : link.target === ueId;
+            const midX = (projection.x(source.x) + projection.x(target.x)) / 2;
+            const midY = (projection.y(source.y) + projection.y(target.y)) / 2;
             return (
-              <line
-                key={link.id}
-                className={`ain-topology-link${active ? " is-active" : ""}`}
-                x1={projection.x(source.x)}
-                y1={projection.y(source.y)}
-                x2={projection.x(target.x)}
-                y2={projection.y(target.y)}
-              >
-                <title>{`${source.id} → ${target.id}：RSRP ${link.rsrp} dBm / SINR ${link.sinr} dB / 吞吐量 ${link.throughput} Mbps`}</title>
-              </line>
+              <g key={link.id}>
+                <line
+                  className={`ain-topology-link${active ? " is-active" : ""}`}
+                  x1={projection.x(source.x)}
+                  y1={projection.y(source.y)}
+                  x2={projection.x(target.x)}
+                  y2={projection.y(target.y)}
+                >
+                  <title>{`${source.id} → ${target.id}：RSRP ${link.rsrp} dBm / SINR ${link.sinr} dB / 吞吐量 ${link.throughput} Mbps（窗口内主服务连接）`}</title>
+                </line>
+                <text
+                  className="ain-topology-weight"
+                  x={midX}
+                  y={midY - 3}
+                  textAnchor="middle"
+                >
+                  {link.rsrp.toFixed(1)}
+                </text>
+              </g>
             );
           })}
           {nodes.map((node) => (

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { analyzeNetwork, CASE_WINDOWS, DEFAULT_SCOPE, loadDashboard, scopeLabel } from "../../services/backend";
-import type { DashboardData, Diagnosis, QueryScope } from "../../types/backend";
+import { analyzeNetwork, CASE_WINDOWS, DEFAULT_SCOPE, fetchForecast, loadDashboard, scopeLabel } from "../../services/backend";
+import type { DashboardData, Diagnosis, ForecastResult, QueryScope } from "../../types/backend";
 import { displayMetric, getLatestFrame } from "../../services/metrics";
 import useNetworkQuery from "../../hooks/useNetworkQuery";
 import QueryPanel from "../../chat/QueryPanel";
@@ -11,6 +11,7 @@ import RadioMapChart from "../../components/charts/RadioMapChart";
 import TopologyChart from "../../components/charts/TopologyChart";
 import MetricCharts from "../../components/charts/MetricCharts";
 import TrendChart from "../../components/charts/TrendChart";
+import ForecastCompareChart from "../../components/charts/ForecastCompareChart";
 import "./WorkbenchPage.css";
 import "./BackendIntegration.css";
 
@@ -21,12 +22,14 @@ export default function WorkbenchPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [selectedUeId, setSelectedUeId] = useState("");
   const [focusedApId, setFocusedApId] = useState<string | null>(null);
-  const [panelOpen, setPanelOpen] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [diagnosis, setDiagnosis] = useState<Diagnosis | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analysisError, setAnalysisError] = useState("");
+  const [forecast, setForecast] = useState<ForecastResult | null>(null);
+  const [forecastLoading, setForecastLoading] = useState(false);
+  const [forecastError, setForecastError] = useState("");
   const analysisController = useRef<AbortController | null>(null);
   const query = useNetworkQuery();
 
@@ -61,6 +64,18 @@ export default function WorkbenchPage() {
       if (analysisController.current === controller) { analysisController.current = null; setAnalyzing(false); }
     }
   }
+
+  useEffect(() => {
+    if (!data) { setForecast(null); return; }
+    const controller = new AbortController(); let active = true;
+    setForecastLoading(true); setForecastError(""); setForecast(null);
+    fetchForecast(data.scope, controller.signal).then(result => {
+      if (active) setForecast(result);
+    }).catch(reason => {
+      if (active) setForecastError(reason instanceof Error ? reason.message : "预测对比生成失败");
+    }).finally(() => { if (active) setForecastLoading(false); });
+    return () => { active = false; controller.abort(); };
+  }, [data]);
   const ues = data?.nodes.filter(n => n.type === "ue") || [];
   const latest = getLatestFrame(data?.metrics || []).metrics.find(r => r.ueId === selectedUeId);
   const serving = data?.links.filter(l => l.target === selectedUeId) || [];
@@ -76,7 +91,7 @@ export default function WorkbenchPage() {
   }
   return <main className="ain-workbench">
     <div className="ain-page-heading"><div><p className="ain-eyebrow">OBSERVE / EXPLAIN / MANAGE</p><h1>网络分析与管理</h1><p className="ain-muted">采样分布、连接与指标联动；围绕候选原因组织证据。</p></div>
-      <div className="ain-heading-controls"><button className="ain-button" disabled={loading} onClick={() => setScope({ ...scope })}>重新载入</button><button className="ain-button" aria-expanded={panelOpen} aria-controls="ain-management-panel" onClick={() => setPanelOpen(v => !v)}>{panelOpen ? "收起面板" : "展开面板"}</button></div>
+      <div className="ain-heading-controls"><button className="ain-button" disabled={loading} onClick={() => setScope({ ...scope })}>重新载入</button></div>
     </div>
     <form className="ain-scope-form" onSubmit={event => { event.preventDefault(); setScope({ ...draft }); }}>
       <label>场景<select value={draft.scenario} onChange={e => setDraft(v => ({ ...v, scenario: e.target.value }))}>{["校园", "商场", "体育馆"].map(s => <option key={s}>{s}</option>)}</select></label>
@@ -91,11 +106,32 @@ export default function WorkbenchPage() {
     {error && <div className="ain-error" role="alert"><p>{error}</p><button className="ain-button" onClick={() => setScope({ ...scope })}>重试</button></div>}
     {!loading && !error && !data && <div className="ain-load-state"><h2>所选场景与时间段暂无数据</h2><p>{scopeLabel(scope)}</p><p>请切回校园已有时间段。当前文件没有商场和体育馆的数据。</p></div>}
     {data && <>
+      <section id="ain-management-panel" className="ain-top-panel" aria-label="分析与管理面板">
+        <div className="ain-panel-heading"><h2>分析与管理</h2><span>输入问题，AI 返回研判 / 热力图 / 拓扑结果，结果与当前展示窗口口径一致</span></div>
+        <div className="ain-top-panel-grid">
+          <div className="ain-top-panel-side">
+            <section className="ain-object-details"><h3>指标对象
+              <select id="ain-panel-ue" className="ain-panel-ue-select" value={selectedUeId} onChange={e => selectUE(e.target.value)}>{ues.map(n => <option key={n.id}>{n.id}</option>)}</select>
+            </h3><dl>
+              <div><dt>服务 AP</dt><dd>{serving.map(l => l.source).join("、") || "无"}</dd></div>
+              <div><dt>最新 RSRP</dt><dd>{displayMetric(latest?.rsrpDbm)} dBm</dd></div>
+              <div><dt>最新 SINR</dt><dd>{displayMetric(latest?.sinrDb)} dB</dd></div>
+              <div><dt>最新吞吐量</dt><dd>{displayMetric(latest?.throughputMbps)} Mbps</dd></div>
+              <div><dt>采样时间</dt><dd>{latest?.backendTime || "暂无数据"}</dd></div>
+            </dl></section>
+            {focused && <section className="ain-object-details ain-ap-focus"><h3>拓扑关注 / {focused.id}</h3><p>坐标：({focused.x}, {focused.y}) m</p><div className="ain-ap-ue-buttons">{data.links.filter(l => l.source === focused.id).map(l => <button key={l.id} className="ain-button" onClick={() => selectUE(l.target)}>{l.target} / {displayMetric(l.throughput)} Mbps</button>)}</div></section>}
+            <section className="ain-management-slot"><h3>动态管理 / 仿真验证</h3><p className="ain-muted">配置修改、仿真运行及前后对比属于后续管理接口，本批先完成观测与故障展示。</p><button className="ain-button" disabled>管理接口待接入</button></section>
+          </div>
+          <div className="ain-top-panel-chat">
+            <QueryPanel query={query} scenario={data.scope.scenario} window={data.scope} disabled={loading} />
+            <ToolResultPanel result={query.result} />
+          </div>
+        </div>
+      </section>
       <div className="ain-data-bar"><span className="ain-source-badge">CSV 仿真历史数据</span><span>{data.metrics.length} 条记录</span><span>{data.nodes.filter(n => n.type === "ap").length} AP / {ues.length} UE</span><span>最新采样：{data.metrics.at(-1)?.backendTime}</span>
-        <label htmlFor="ain-selected-ue">指标对象<select id="ain-selected-ue" value={selectedUeId} onChange={e => selectUE(e.target.value)}>{ues.map(n => <option key={n.id}>{n.id}</option>)}</select></label>
         <p className="ain-loaded-scope">已加载：{scopeLabel(data.scope)}</p>
       </div>
-      <div className={`ain-workbench-grid${panelOpen ? "" : " ain-panel-closed"}`}>
+      <div className="ain-workbench-grid">
         <div className="ain-data-column">
           <KpiSummary data={data} ueId={selectedUeId} />
           <div className="ain-main-grid"><div className="ain-large-charts">
@@ -104,21 +140,8 @@ export default function WorkbenchPage() {
           </div><MetricCharts data={data} ueId={selectedUeId} onSelect={selectUE} /></div>
           <EvidencePanel result={diagnosis} pending={analyzing} error={analysisError} />
           <div className="ain-trend-slot"><TrendChart data={data} ueId={selectedUeId} /></div>
-          <ToolResultPanel result={query.result} />
+          <ForecastCompareChart forecast={forecast} pending={forecastLoading} error={forecastError} />
         </div>
-        {panelOpen && <aside id="ain-management-panel" className="ain-side-panel" aria-label="分析与管理面板">
-          <div className="ain-panel-heading"><h2>分析与管理</h2><span>指标对象与场景诊断分别标注</span></div>
-          <section className="ain-object-details"><h3>{selectedUeId || "未选择对象"} / 指标对象</h3><dl>
-            <div><dt>服务 AP</dt><dd>{serving.map(l => l.source).join("、") || "无"}</dd></div>
-            <div><dt>最新 RSRP</dt><dd>{displayMetric(latest?.rsrpDbm)} dBm</dd></div>
-            <div><dt>最新 SINR</dt><dd>{displayMetric(latest?.sinrDb)} dB</dd></div>
-            <div><dt>最新吞吐量</dt><dd>{displayMetric(latest?.throughputMbps)} Mbps</dd></div>
-            <div><dt>采样时间</dt><dd>{latest?.backendTime || "暂无数据"}</dd></div>
-          </dl></section>
-          {focused && <section className="ain-object-details ain-ap-focus"><h3>拓扑关注 / {focused.id}</h3><p>坐标：({focused.x}, {focused.y}) m</p><div className="ain-ap-ue-buttons">{data.links.filter(l => l.source === focused.id).map(l => <button key={l.id} className="ain-button" onClick={() => selectUE(l.target)}>{l.target} / {displayMetric(l.throughput)} Mbps</button>)}</div></section>}
-          <QueryPanel query={query} scenario={data.scope.scenario} disabled={loading} />
-          <section className="ain-management-slot"><h3>动态管理 / 仿真验证</h3><p className="ain-muted">配置修改、仿真运行及前后对比属于后续管理接口，本批先完成观测与故障展示。</p><button className="ain-button" disabled>管理接口待接入</button></section>
-        </aside>}
       </div>
       <div className="ain-bottom-actions"><button className="ain-button ain-primary" disabled={loading || analyzing} onClick={() => void analyze()}>{analyzing ? "正在分析…" : "分析当前时间段"}</button><button className="ain-button" disabled>运行仿真</button><button className="ain-button" disabled>对比方案</button><button className="ain-button" disabled>保存分析</button><span className="ain-muted">分析范围为已加载场景内各 AP；点击 UE 只切换指标对象。</span></div>
     </>}

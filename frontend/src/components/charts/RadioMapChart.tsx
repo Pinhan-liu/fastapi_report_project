@@ -20,13 +20,13 @@ export default function RadioMapChart({ data, ueId, focusedApId, onSelectUE, onF
     footer={<><div className="ain-spatial-key">{BANDS.map(b => <span key={b.label}><i style={{ background: b.color }} />{b.label} dBm</span>)}</div>
       <p>在所选时间段内，按 UE 的采样位置聚合。空白表示无采样，不代表信号为零；未做空间预测。</p>
       <p>节点位置为范围内最新时刻；网格为整个时间段的均值。</p>
-      <p>AP 热力接口：{data.apMeans.map(([x, y, value]) => `(${x}, ${y}) ${value.toFixed(1)} dBm`).join("；") || "无数据"}。</p>
-      <p>以上 AP 坐标处的值是关联 UE 的 RSRP 均值，不是 AP 发射功率。</p></>}
+      <p>热力接口：{data.apMeans.length} 个网格均值点（{data.gridSize}m 网格），覆盖 X 20–480m / Y 20–430m。</p>
+      <p>网格值为对应区域 UE 的 RSRP 均值，非 AP 发射功率。</p></>}
   >{p && <svg className="ain-spatial-svg" viewBox="0 0 480 400" role="group" aria-label="UE 采样位置的 RSRP 网格图">
     <SceneAxes area={data.area} projection={p} />
     {data.cells.map(c => <rect key={`${c.x},${c.y}`} x={p.x(c.x)} y={p.y(c.y + data.gridSize)}
-      width={p.x(data.gridSize) - p.x(0)} height={p.y(0) - p.y(data.gridSize)}
-      fill={color(c.value)} opacity={0.8} stroke="#171d30" strokeWidth={0.7}>
+      width={p.x(c.x + data.gridSize) - p.x(c.x)} height={p.y(c.y) - p.y(c.y + data.gridSize)}
+      fill={color(c.value)} opacity={0.8} stroke="#171d30" strokeWidth={0.35}>
       <title>{`X ${c.x}–${c.x + data.gridSize}m / Y ${c.y}–${c.y + data.gridSize}m：RSRP ${c.value.toFixed(1)} dBm；${c.count} 次采样`}</title>
     </rect>)}
     {data.nodes.map(node => <SceneNode key={node.id} node={node} projection={p}

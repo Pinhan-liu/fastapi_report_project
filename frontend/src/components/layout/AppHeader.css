@@ -6,7 +6,8 @@
   min-height: 78px;
   padding: 16px 28px;
   background: #fff;
-  border-bottom: 1px solid #dce6e8;
+  border-bottom: 1px solid #e2e9eb;
+  box-shadow: 0 1px 0 rgba(23, 29, 48, 0.03), 0 6px 18px rgba(23, 29, 48, 0.04);
 }
 
 .ain-brand {

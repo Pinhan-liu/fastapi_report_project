@@ -18,11 +18,13 @@ export interface NetworkNode { id: string; type: "ap" | "ue"; x: number; y: numb
 export interface NetworkLink {
   id: string; source: string; target: string;
   rsrp: number; sinr: number; throughput: number;
+  primary?: boolean;
 }
 export interface HeatCell { x: number; y: number; value: number; count: number }
 export interface DashboardData {
   scope: QueryScope; generatedAt: string; metrics: MetricRecord[];
-  area: { width: number; height: number }; nodes: NetworkNode[]; links: NetworkLink[];
+  area: { xMin: number; yMin: number; xMax: number; yMax: number };
+  nodes: NetworkNode[]; links: NetworkLink[];
   gridSize: number; cells: HeatCell[]; apMeans: [number, number, number][];
 }
 export interface Candidate {
@@ -45,4 +47,14 @@ export interface Diagnosis {
 export interface ChatResult {
   reply: string; intent: string; scope: QueryScope; diagnosis: Diagnosis | null;
   chart: { type: string; option: Record<string, unknown> } | null;
+}
+export type ForecastMetric = "rsrp" | "sinr" | "throughput";
+export interface ForecastSeriesItem {
+  true_mean: number | null; pred_mean: number | null; mape: number | null;
+  bins: string[]; true: number[]; predicted: number[];
+}
+export interface ForecastResult {
+  scenario: string; window_start: string; window_end: string; method: string;
+  bin_size_min: number; metrics: ForecastMetric[]; ues: string[];
+  series: Record<string, Record<ForecastMetric, ForecastSeriesItem>>;
 }

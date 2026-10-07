@@ -124,7 +124,7 @@ export async function loadDashboard(scope: QueryScope, signal?: AbortSignal, fet
   const metrics = await fetchRecords(scope, signal, fetcher);
   if (!metrics.length) return null;
   const latest = metrics.at(-1)!;
-  const params = new URLSearchParams({ scenario: scope.scenario, timestamp: latest.backendTime });
+  const params = new URLSearchParams({ scenario: scope.scenario, start_time: scope.start, end_time: scope.end, timestamp: latest.backendTime });
   const heatParams = new URLSearchParams({ scenario: scope.scenario, start_time: scope.start, end_time: scope.end, metric: "rsrp" });
   const [topology, heat] = await Promise.all([
     request(`/network/topology/basic?${params}`, signal, undefined, fetcher),
@@ -145,12 +145,16 @@ export async function loadDashboard(scope: QueryScope, signal?: AbortSignal, fet
     if (!Array.isArray(v) || v.length < 3 || !Number.isFinite(numeric(v[2]))) throw new Error("热力点位无效");
     return [coordinate(v[0]), coordinate(v[1]), numeric(v[2])] as [number, number, number];
   });
-  const gridSize = 40;
+  const gridSize = 20;
+  const allX = metrics.map(r => r.x).concat(nodes.map(n => n.x));
+  const allY = metrics.map(r => r.y).concat(nodes.map(n => n.y));
   return {
     scope: { ...scope }, generatedAt: latest.timestamp, metrics, nodes, links,
     area: {
-      width: Math.ceil(Math.max(480, ...metrics.map(r => r.x + gridSize), ...nodes.map(n => n.x)) / gridSize) * gridSize,
-      height: Math.ceil(Math.max(440, ...metrics.map(r => r.y + gridSize), ...nodes.map(n => n.y)) / gridSize) * gridSize,
+      xMin: Math.floor(Math.min(...allX) / gridSize) * gridSize,
+      yMin: Math.floor(Math.min(...allY) / gridSize) * gridSize,
+      xMax: Math.ceil(Math.max(...allX) / gridSize) * gridSize,
+      yMax: Math.ceil(Math.max(...allY) / gridSize) * gridSize,
     }, gridSize, cells: aggregateCells(metrics, gridSize), apMeans,
   };
 }
@@ -181,16 +185,54 @@ export async function analyzeNetwork(scope: QueryScope, signal?: AbortSignal): P
   const data = await request("/analyze/anomaly", signal, { scenario: scope.scenario, window_start: scope.start, window_end: scope.end, metrics: ["rsrp", "sinr", "throughput", "prb_usage", "packet_loss"] });
   return parseDiagnosis(data, scope);
 }
-export async function chatNetwork(message: string, scenario: string, signal?: AbortSignal): Promise<ChatResult> {
-  const data = await request("/agent/chat", signal, { message, scenario, session_id: "frontend-p0" });
+export async function chatNetwork(message: string, scenario: string, window?: QueryScope, signal?: AbortSignal): Promise<ChatResult> {
+  const data = await request("/agent/chat", signal, {
+    message, scenario, session_id: "frontend-p0",
+    // 第4周：把当前展示窗口传给后端工具，保证"对话口径=页面口径"
+    window_start: window?.start, window_end: window?.end,
+  });
   const ref = data.query_ref ? obj(data.query_ref) : {};
-  // 源码中四个工具均固定使用这三天；query_ref 未提供时间时明确使用工具范围。
-  const scope = { scenario: str(ref.scenario) || scenario, start: str(ref.start_time) || "2026-01-01 00:00:00", end: str(ref.end_time) || "2026-01-03 23:59:59" };
+  // 工具返回的实际窗口（后端透传），未提供时用传入窗口或默认三天
+  const scope = {
+    scenario: str(ref.scenario) || scenario,
+    start: str(ref.start_time) || window?.start || "2026-01-01 00:00:00",
+    end: str(ref.end_time) || window?.end || "2026-01-03 23:59:59",
+  };
   validateScope(scope);
   const intent = str(data.intent), rawChart = data.chart ? obj(data.chart) : null;
   return {
     reply: requiredString(data.reply, "reply"), intent, scope,
     diagnosis: intent === "fault_diagnosis" && data.detail ? parseDiagnosis(data.detail, scope) : null,
     chart: rawChart?.option ? { type: str(rawChart.type), option: obj(rawChart.option) } : null,
+  };
+}
+export async function fetchForecast(scope: QueryScope, signal?: AbortSignal): Promise<ForecastResult> {
+  validateScope(scope);
+  const data = await request("/analyze/forecast", signal, {
+    scenario: scope.scenario, window_start: scope.start, window_end: scope.end,
+  });
+  const ues = Array.isArray(data.ues) ? data.ues.map(String) : [];
+  const metrics = Array.isArray(data.metrics) ? data.metrics.map(String) : [];
+  const raw = obj(data.series);
+  const series: ForecastResult["series"] = {};
+  for (const ue of ues) {
+    const byMetric = obj(raw[ue]);
+    series[ue] = {} as ForecastResult["series"][string];
+    for (const m of metrics) {
+      const item = obj(byMetric[m]);
+      series[ue][m as ForecastMetric] = {
+        true_mean: item.true_mean == null ? null : numeric(item.true_mean),
+        pred_mean: item.pred_mean == null ? null : numeric(item.pred_mean),
+        mape: item.mape == null ? null : numeric(item.mape),
+        bins: Array.isArray(item.bins) ? item.bins.map(String) : [],
+        true: Array.isArray(item.true) ? item.true.map(v => numeric(v)) : [],
+        predicted: Array.isArray(item.predicted) ? item.predicted.map(v => numeric(v)) : [],
+      };
+    }
+  }
+  return {
+    scenario: str(data.scenario), window_start: str(data.window_start), window_end: str(data.window_end),
+    method: str(data.method), bin_size_min: numeric(data.bin_size_min) || 10,
+    metrics: metrics as ForecastMetric[], ues, series,
   };
 }

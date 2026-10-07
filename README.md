@@ -98,8 +98,8 @@ npm run dev
 | 2    | POST | /api/analyze/anomaly  | 多 KPI 联合故障研判                                          |
 | 3    | POST | /api/agent/chat       | 自然语言对话                                                 |
 | 4    | POST | /api/export/report    | 导出分析报告                                                 |
-| 5    | POST | /api/analyze/forecast | 时序预测：基于历史与实时数据预测未来信号质量 / 电磁频谱态势（🚧 开发中） |
-| 6    | GET  | /api/network/topology | 网络拓扑：AP / UE 位置与连接关系（🚧 开发中）                 |
+| 5    | POST | /api/analyze/forecast | 真实 vs 预测对比：移动平均 baseline（10 分钟桶 · 前 60% 训练 / 后 40% 测试 · 输出 True / Predicted / MAPE）；Prophet / LSTM 待接入 |
+| 6    | GET  | /api/network/topology/basic | 网络拓扑：AP / UE 位置与连接关系（已带坐标） |
 
 详细请求 / 响应格式见 [docs/api.md](docs/api.md)。
 

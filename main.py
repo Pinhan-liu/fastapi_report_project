@@ -11,7 +11,7 @@ import csv as _csv
 import statistics
 from pathlib import Path
 import llm_agent
-from llm_agent import get_intent
+from llm_agent import get_intent, rule_intent
 from realtime_simulator import start_realtime_service, get_incremental_data, DATA_COLUMNS
 from fastapi import Request, status
 from fastapi.responses import JSONResponse
@@ -444,66 +444,28 @@ def analyze_anomaly(req: AnomalyRequest):
         },
     }
 
-# ============ 关键词规则库（API降级独立路径，不依赖LLM） ============
-KEYWORD_RULES = {
-    "query_kpi": [
-        # 通用查询
-        "查一下", "整体情况", "概况", "kpi", "指标", "运行情况", "网络状态",
-        "数据概况", "当前情况", "整体网络", "网络怎么样", "基本情况", "看看数据",
-        "随便", "看看", "随便看看", "随便说点", "有什么", "介绍一下",
-        # 指标类直查
-        "rsrp", "sinr", "吞吐量", "时延", "丢包率", "prb利用率", "信号强度"
-    ],
-"fault_diagnosis": [
-    # 通用故障类
-    "异常", "故障", "问题", "拥塞", "掉线", "差", "不好", "排查",
-    "分析异常", "有没有问题", "故障诊断", "什么原因", "为什么", "定位问题",
-    # 覆盖类细分
-    "弱覆盖", "覆盖差", "信号差", "信号弱", "覆盖空洞", "信号不好",
-    # 容量类细分
-    "拥塞", "容量不足", "用户多", "卡", "慢", "prb高",
-    # 时延/丢包类细分
-    "时延高", "延迟大", "时延大", "ping高", "丢包", "丢包率高", "断连",
-    # 速率类细分
-    "吞吐量低", "带宽不足", "速率低", "网速慢", "速率差"
-    ],
-    "get_heatmap": [
-        "热力图", "热图", "信号分布", "覆盖图", "信号热力", "覆盖热力", "热力分布",
-        "信号覆盖情况", "覆盖分布", "场强分布"
-    ],
-    "get_topology": [
-        "拓扑", "结构", "连接关系", "节点", "链路", "网络拓扑", "拓扑结构", "组网",
-        "设备连接", "有哪些设备", "基站分布"
-    ]
-}
-
-
-def match_intent_by_keyword(message: str) -> str | None:
-    msg = message.lower()
-    best_intent = None
-    max_len = 0
-    for intent, keywords in KEYWORD_RULES.items():
-        for kw in keywords:
-            if kw in msg and len(kw) > max_len:
-                max_len = len(kw)
-                best_intent = intent
-    return best_intent
-
-# ============ 接口3：自然语言对话（LLM 意图 → Function Calling 工具注册表分发） ============
+# ============ 接口3：自然语言对话（统一规则源：llm_agent.rule_intent → LLM 增强 → 工具注册表分发） ============
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "sess_001"
     scenario: str = "校园"
+    # 第4周：前端可把当前展示窗口传给工具，保证"对话口径=页面口径"；不传则用默认三天
+    window_start: str | None = None
+    window_end: str | None = None
 
 VALID_SCENARIOS = ("校园", "商场", "体育馆")
+
+# 对话工具默认窗口（前端未传时使用）；接口2/热力图/拓扑接口的默认口径不变
+TOOL_WINDOW_START = "2026-01-01 00:00:00"
+TOOL_WINDOW_END = "2026-01-03 23:59:59"
 
 def resolve_scenario(params_scenario, default_scenario):
     """场景白名单校验：LLM 可能把"A区"之类当成场景，无效则回退请求默认场景"""
     return params_scenario if params_scenario in VALID_SCENARIOS else default_scenario
 
-# ---- 工具1：KPI 概况查询（真实 CSV 均值） ----
-def tool_query_kpi(scenario: str) -> dict:
-    win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
+# ---- 工具1：KPI 概况查询（真实 CSV 均值；窗口跟随前端，未传用默认三天） ----
+def tool_query_kpi(scenario: str, win_start: str | None = None, win_end: str | None = None) -> dict:
+    win_start, win_end = win_start or TOOL_WINDOW_START, win_end or TOOL_WINDOW_END
     rows = filter_rows(scenario, win_start, win_end)
     if rows:
         reply = (f"当前时段网络整体运行平稳：RSRP均值{avg(rows,'rsrp'):.1f}dBm，"
@@ -515,8 +477,8 @@ def tool_query_kpi(scenario: str) -> dict:
             "query_ref": {"scenario": scenario}}
 
 # ---- 工具2：故障研判（意图 → 确定性规则引擎=接口2，LLM 不参与计算，规避幻觉） ----
-def tool_fault_diagnosis(scenario: str) -> dict:
-    win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
+def tool_fault_diagnosis(scenario: str, win_start: str | None = None, win_end: str | None = None) -> dict:
+    win_start, win_end = win_start or TOOL_WINDOW_START, win_end or TOOL_WINDOW_END
     an = analyze_anomaly(AnomalyRequest(scenario=scenario,
                                         window_start=win_start, window_end=win_end))
     d = an["data"]
@@ -536,15 +498,15 @@ def tool_fault_diagnosis(scenario: str) -> dict:
                                        "start_time": win_start, "end_time": win_end}}
 
 # ---- 工具3：热力图（真实：按 UE 坐标网格聚合 RSRP，ECharts heatmap 直接渲染） ----
-def tool_heatmap(scenario: str) -> dict:
-    win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
+def tool_heatmap(scenario: str, win_start: str | None = None, win_end: str | None = None) -> dict:
+    win_start, win_end = win_start or TOOL_WINDOW_START, win_end or TOOL_WINDOW_END
     rows = filter_rows(scenario, win_start, win_end)
     if not rows:
         return {"reply": f"未找到场景「{scenario}」的数据，暂无法生成热力图。",
                 "intent": "get_heatmap", "chart": None, "query_ref": {"scenario": scenario}}
     # 监测区域（与 data_generator.py MAP_RANGE 一致）与网格大小
     x_min, x_max, y_min, y_max = 20.0, 480.0, 20.0, 430.0
-    grid = 40.0  # 40m×40m → 12列×11行
+    grid = 20.0  # 20m×20m → 23列×21行，热力更细腻
     nx = int((x_max - x_min) // grid) + 1
     ny = int((y_max - y_min) // grid) + 1
     # 网格聚合：ue_x/ue_y → RSRP 均值
@@ -588,8 +550,8 @@ def tool_heatmap(scenario: str) -> dict:
             "query_ref": {"scenario": scenario, "start_time": win_start, "end_time": win_end}}
 
 # ---- 工具4：网络拓扑（基于 CSV 真实连接关系：AP 服务了哪些 UE） ----
-def tool_topology(scenario: str) -> dict:
-    win_start, win_end = "2026-01-01 00:00:00", "2026-01-03 23:59:59"
+def tool_topology(scenario: str, win_start: str | None = None, win_end: str | None = None) -> dict:
+    win_start, win_end = win_start or TOOL_WINDOW_START, win_end or TOOL_WINDOW_END
     rows = filter_rows(scenario, win_start, win_end)
     if not rows:
         return {"reply": f"未找到场景「{scenario}」的数据，暂无法生成拓扑。",
@@ -626,28 +588,30 @@ ENABLE_LLM = True
 
 @app.post("/api/agent/chat")
 def agent_chat(req: ChatRequest):
-    # 1. 第一层：关键词规则匹配（独立主路径，完全不依赖LLM）
-    intent = match_intent_by_keyword(req.message)
-    params = {}
+    # 1. 第一层：统一关键词规则（llm_agent.rule_intent，独立主路径，完全不依赖LLM）
+    rule = rule_intent(req.message)
+    intent = rule.get("intent", "query_kpi")
+    params = rule.get("params", {})
+    hit = rule.get("hit", False)
 
-    # 2. 第二层：关键词未命中 + 启用LLM时，才调用大模型增强识别
-    if not intent and ENABLE_LLM:
+    # 2. 第二层：关键词未命中 + 启用LLM时，才调用大模型增强识别（get_intent 内部自带降级）
+    if not hit and ENABLE_LLM:
         try:
             intent_obj = get_intent(req.message)
-            intent = intent_obj.get("intent", "query_kpi")
-            params = intent_obj.get("params", {})
+            intent = intent_obj.get("intent", intent)
+            params = {**params, **intent_obj.get("params", {})}
         except Exception:
-            # LLM调用失败，自动降级，不抛出错误
-            intent = "query_kpi"
+            # get_intent 已内部降级到 rule_intent，此处仅做最终兜底，不抛出错误
+            pass
 
     # 3. 第三层：最终兜底，任何非法/未知意图全部回退KPI查询
     if intent not in TOOLS:
         intent = "query_kpi"
 
-    # 4. 执行工具，输出格式和正常链路完全一致
+    # 4. 执行工具：窗口跟随前端（未传则默认三天），输出格式和正常链路完全一致
     scenario = resolve_scenario(params.get("scenario"), req.scenario)
     handler = TOOLS.get(intent, TOOLS["query_kpi"])
-    data = handler(scenario)
+    data = handler(scenario, req.window_start, req.window_end)
     return {"code": 0, "message": "success", "data": data}
 
 
@@ -667,18 +631,18 @@ def export_report(req: ReportRequest):
         return error_response(ERROR_CODE["PARAM_MISSING"], "场景参数不能为空")
     if not req.start_time or not req.end_time:
         return error_response(ERROR_CODE["PARAM_MISSING"], "时间参数不能为空")
-        # ==============================
-        report_id = "RPT_" + datetime.now().strftime("%Y%m%d_%H%M%S")
-        ext = "md" if req.format in ("md", "markdown") else "html"
-        filename = f"{report_id}.{ext}"
-        file_path = f"reports/{filename}"
+    # ==============================
+    report_id = "RPT_" + datetime.now().strftime("%Y%m%d_%H%M%S")
+    ext = "md" if req.format in ("md", "markdown") else "html"
+    filename = f"{report_id}.{ext}"
+    file_path = f"reports/{filename}"
 
-        # ===== 新增：生成真实报告内容并写入文件 =====
-        # 1. 拉取对应范围的数据
-        rows = filter_rows(req.scenario, req.start_time, req.end_time)
+    # ===== 新增：生成真实报告内容并写入文件 =====
+    # 1. 拉取对应范围的数据
+    rows = filter_rows(req.scenario, req.start_time, req.end_time)
 
-        # 2. 组装md报告内容
-        content = f"""# 网络分析报告
+    # 2. 组装md报告内容
+    content = f"""# 网络分析报告
     - 报告ID：{report_id}
     - 场景：{req.scenario}
     - 时间范围：{req.start_time} 至 {req.end_time}
@@ -690,15 +654,15 @@ def export_report(req: ReportRequest):
     - 平均吞吐量：{avg(rows, 'throughput'):.1f} Mbps
     """
 
-        # 3. 写入文件
-        with open(file_path, "w", encoding="utf-8") as f:
-            f.write(content)
-        # ============================================
+    # 3. 写入文件
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    # ============================================
 
-        return success_response({
-            "report_id": report_id,
-            "file_url": f"/download/reports/{filename}"
-        })
+    return success_response({
+        "report_id": report_id,
+        "file_url": f"/download/reports/{filename}"
+    })
 
 # ========== 热力图数据接口 ==========
 @app.get("/api/data/heatmap", summary="信号热力图数据")
@@ -722,19 +686,28 @@ def get_heatmap(
             "data": {"metric": metric, "grid_count": 0, "values": []}
         }
 
-    # 2. 按AP坐标聚合，计算平均信号值
+    # 2. 按 UE 坐标 20m 网格聚合（与对话工具 tool_heatmap 口径一致），计算平均信号值
+    x_min, x_max, y_min, y_max = 20.0, 480.0, 20.0, 430.0
+    grid = 20.0
+    nx = int((x_max - x_min) // grid) + 1
+    ny = int((y_max - y_min) // grid) + 1
     grid_map = {}
     for r in rows:
-        key = (r["ap_x"], r["ap_y"])
-        if key not in grid_map:
-            grid_map[key] = []
-        grid_map[key].append(float(r[metric]))
+        try:
+            ux, uy, val = float(r["ue_x"]), float(r["ue_y"]), float(r[metric])
+        except Exception:
+            continue
+        ix = min(int((ux - x_min) // grid), nx - 1)
+        iy = min(int((uy - y_min) // grid), ny - 1)
+        grid_map.setdefault((ix, iy), []).append(val)
 
-    # 3. 转成前端ECharts直接能用的格式
+    # 3. 转成前端ECharts直接能用的格式（x/y 为网格中心坐标）
     result = []
-    for (x, y), values in grid_map.items():
+    for (ix, iy), values in grid_map.items():
         avg_val = sum(values) / len(values)
-        result.append([float(x), float(y), round(avg_val, 2)])
+        cx = round(x_min + ix * grid + grid / 2, 1)
+        cy = round(y_min + iy * grid + grid / 2, 1)
+        result.append([cx, cy, round(avg_val, 2)])
 
     return {
         "code": 0,
@@ -750,32 +723,36 @@ def get_heatmap(
 @app.get("/api/network/topology/basic", summary="基础网络拓扑数据")
 def get_basic_topology(
     scenario: str = Query(..., description="场景名"),
-    timestamp: str | None = Query(None, description="指定时刻，默认取第一条数据的时刻")
+    start_time: str | None = Query(None, description="窗口起始时间"),
+    end_time: str | None = Query(None, description="窗口结束时间"),
+    timestamp: str | None = Query(None, description="指定时刻，默认取窗口内第一条数据的时刻")
 ):
-    # 1. 复用已加载数据集
-    rows = filter_rows(scenario, "2026-01-01 00:00:00", "2026-12-31 23:59:59")
+    # 1. 复用已加载数据集；与 /api/data/query 同口径按窗口过滤（未传则默认全量）
+    if start_time and end_time:
+        rows = filter_rows(scenario, start_time, end_time)
+    else:
+        rows = filter_rows(scenario, "2026-01-01 00:00:00", "2026-12-31 23:59:59")
 
     if not rows:
         return {"code": 0, "message": "success", "data": {"nodes": [], "links": []}}
 
-    # 2. 默认取第一个时刻的拓扑
+    # 2. 拓扑节点/链路基于整个监测窗口聚合（不再按单时刻过滤）：
+    #    窗口内出现过的全部 AP 与 UE 都展示，链路为该 AP-UE 连接在整个窗口的均值指标
     if not timestamp:
         timestamp = rows[0]["timestamp"]
-    rows = [r for r in rows if r["timestamp"] == timestamp]
 
-    # 3. 构造节点列表（AP + UE）
+    # 节点：AP 取场景内全部固定基站（不随窗口消失），UE 取窗口内出现过的终端
     nodes = []
-    ap_seen = set()
+    all_rows = filter_rows(scenario, "2026-01-01 00:00:00", "2026-12-31 23:59:59")
+    ap_seen = {}
+    for r in all_rows:
+        if r["ap_id"] not in ap_seen:
+            ap_seen[r["ap_id"]] = (float(r["ap_x"]), float(r["ap_y"]))
+    for ap_id in sorted(ap_seen):
+        x, y = ap_seen[ap_id]
+        nodes.append({"id": ap_id, "type": "ap", "x": x, "y": y})
     ue_seen = set()
     for r in rows:
-        if r["ap_id"] not in ap_seen:
-            ap_seen.add(r["ap_id"])
-            nodes.append({
-                "id": r["ap_id"],
-                "type": "ap",
-                "x": float(r["ap_x"]),
-                "y": float(r["ap_y"])
-            })
         if r["user_id"] not in ue_seen:
             ue_seen.add(r["user_id"])
             nodes.append({
@@ -785,20 +762,43 @@ def get_basic_topology(
                 "y": float(r["ue_y"])
             })
 
-    # 4. 构造链路列表（AP-UE连接关系）
+    # 链路：每个 UE 只保留一条主链路 —— 窗口内连接采样占比最高的服务 AP
+    #（并列时优先最新时刻仍在服务的 AP）；指标为该连接在窗口内的均值
     links = []
-    link_seen = set()
+    link_acc = {}
+    last_ts = max(r["timestamp"] for r in rows)
+    last_ue_ap = {}
+    for r in rows:
+        if r["timestamp"] == last_ts:
+            last_ue_ap[r["user_id"]] = r["ap_id"]
     for r in rows:
         key = (r["ap_id"], r["user_id"])
-        if key not in link_seen:
-            link_seen.add(key)
-            links.append({
-                "source": r["ap_id"],
-                "target": r["user_id"],
-                "rsrp": float(r["rsrp"]),
-                "sinr": float(r["sinr"]),
-                "throughput": float(r["throughput"])
-            })
+        acc = link_acc.setdefault(key, {"rsrp": [], "sinr": [], "throughput": [], "count": 0})
+        acc["rsrp"].append(float(r["rsrp"]))
+        acc["sinr"].append(float(r["sinr"]))
+        acc["throughput"].append(float(r["throughput"]))
+        acc["count"] += 1
+    # 每 UE 选主服务 AP：采样次数最多，并列时选最新时刻服务 AP
+    primary_key = {}
+    for (source, target), acc in link_acc.items():
+        cur = primary_key.get(target)
+        is_latest = last_ue_ap.get(target) == source
+        if cur is None:
+            primary_key[target] = (source, acc["count"], is_latest)
+        elif acc["count"] > cur[1] or (acc["count"] == cur[1] and is_latest and not cur[2]):
+            primary_key[target] = (source, acc["count"], is_latest)
+    for (source, target), acc in link_acc.items():
+        if primary_key[target][0] != source:
+            continue
+        links.append({
+            "id": f"{source}->{target}",
+            "source": source,
+            "target": target,
+            "rsrp": round(sum(acc["rsrp"]) / len(acc["rsrp"]), 2),
+            "sinr": round(sum(acc["sinr"]) / len(acc["sinr"]), 2),
+            "throughput": round(sum(acc["throughput"]) / len(acc["throughput"]), 2),
+            "primary": True
+        })
 
     return {
         "code": 0,
@@ -838,4 +838,100 @@ def api_get_realtime_data(last_time: str = None):
             "records": records
         }
     }
+
+
+# ========== 接口5：真实 vs 预测 对比（移动平均 baseline，供"信号/频谱态势预测"演示） ==========
+class ForecastRequest(BaseModel):
+    scenario: str = "校园"
+    window_start: str = "2026-01-01 00:00:00"
+    window_end: str = "2026-01-03 23:59:59"
+
+
+@app.post("/api/analyze/forecast", summary="真实 vs 预测 对比（移动平均 baseline）")
+def analyze_forecast(req: ForecastRequest):
+    """
+    对每个 UE × 指标（rsrp/sinr/throughput）：
+    1. 按 10 分钟桶聚合实测序列；
+    2. 前 60% 作为训练段，用移动平均(窗口3) 预测后 40% 测试段；
+    3. 输出 测试段实测均值(True) vs 预测均值(Predicted) 与 MAPE。
+    后续可替换为 Prophet / LSTM 接入机器学习模型，本接口仅作链路打通 baseline。
+    """
+    rows = filter_rows(req.scenario, req.window_start, req.window_end)
+    metrics = ["rsrp", "sinr", "throughput"]
+    ues = sorted({r["user_id"] for r in rows})
+    if not rows or not ues:
+        return success_response({
+            "scenario": req.scenario, "window_start": req.window_start,
+            "window_end": req.window_end, "method": "moving_average",
+            "metrics": metrics, "ues": [], "series": {}
+        })
+
+    import collections
+    # 1. 按 UE × 指标 × 10分钟桶 聚合均值（保持时间升序）
+    def bin_key(ts):
+        try:
+            dt = datetime.strptime(ts, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            return None
+        return dt.replace(minute=dt.minute // 10 * 10, second=0).strftime("%Y-%m-%d %H:%M")
+
+    buckets = collections.defaultdict(lambda: collections.defaultdict(list))
+    for r in rows:
+        k = bin_key(r["timestamp"])
+        if k is None:
+            continue
+        ue = r["user_id"]
+        for m in metrics:
+            try:
+                buckets[ue][m].append((k, float(r[m])))
+            except (KeyError, TypeError, ValueError):
+                continue
+
+    def _ma_forecast(values):
+        """移动平均(win=3)：用训练段最后 3 个桶均值作为对测试段的恒定预测"""
+        n = len(values)
+        if n < 4:
+            return None, None, None
+        split = max(2, int(n * 0.6))
+        train = values[:split]
+        test = values[split:]
+        ma = train[-3:] if len(train) >= 3 else train
+        pred = sum(ma) / len(ma)
+        true = sum(test) / len(test)
+        denom = max(abs(true), 1e-6)
+        mape = abs(true - pred) / denom * 100
+        return round(true, 2), round(pred, 2), round(min(mape, 999.0), 2)
+
+    series = {}
+    for ue in ues:
+        series[ue] = {}
+        for m in metrics:
+            seq = buckets[ue][m]
+            if len(seq) < 4:
+                series[ue][m] = {"true_mean": None, "pred_mean": None, "mape": None, "bins": [], "true": [], "predicted": []}
+                continue
+            # 真正按 10 分钟桶聚合均值，再按时间排序成序列
+            grouped = {}
+            for k, v in seq:
+                grouped.setdefault(k, []).append(v)
+            agg = sorted((k, sum(vs) / len(vs)) for k, vs in grouped.items())
+            bins = [k for k, _ in agg]
+            vals = [v for _, v in agg]
+            true, pred, mape = _ma_forecast(vals)
+            series[ue][m] = {
+                "true_mean": true, "pred_mean": pred, "mape": mape,
+                "bins": bins, "true": [round(v, 2) for v in vals], "predicted": []
+            }
+
+    return success_response({
+        "scenario": req.scenario,
+        "window_start": req.window_start,
+        "window_end": req.window_end,
+        "method": "moving_average(win=3)",
+        "bin_size_min": 10,
+        "metrics": metrics,
+        "ues": ues,
+        "series": series
+    })
+
 

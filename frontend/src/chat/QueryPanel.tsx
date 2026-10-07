@@ -1,23 +1,27 @@
 import { useState } from "react";
 import type useNetworkQuery from "../hooks/useNetworkQuery";
+import type { QueryScope } from "../types/backend";
 import "./QueryPanel.css";
 
-export default function QueryPanel({ query, scenario, disabled }: {
-  query: ReturnType<typeof useNetworkQuery>; scenario: string; disabled: boolean;
+export default function QueryPanel({ query, scenario, window: scopeWindow, disabled }: {
+  query: ReturnType<typeof useNetworkQuery>; scenario: string; window?: QueryScope; disabled: boolean;
 }) {
   const [draft, setDraft] = useState("");
   const busy = disabled || query.pending;
-  function send() { if (!busy && draft.trim()) void query.submit(draft, scenario); }
+  const scopeText = scopeWindow
+    ? `${scopeWindow.start} — ${scopeWindow.end}`
+    : "2026-01-01—01-03（默认）";
+  function send() { if (!busy && draft.trim()) void query.submit(draft, scenario, scopeWindow); }
   return <section>
     <h3>自然语言查询</h3>
-    <p className="ain-query-tip">对话工具目前查询 2026-01-01—01-03。结果中的场景和时间以工具返回为准；当前版本不支持单独诊断一个 UE。</p>
+    <p className="ain-query-tip">对话工具按当前展示窗口查询（{scopeText}）。结果中的场景和时间以工具返回为准；当前版本不支持单独诊断一个 UE。</p>
     <div className="ain-query-shortcuts">
       {[
         ["指标概况", `${scenario}的 KPI 数据`],
         ["分析原因", `${scenario}有没有异常，分析问题原因`],
         ["生成热力图", `${scenario}的信号热力图`],
         ["查看连接", `${scenario}的拓扑连接关系`],
-      ].map(([label, text]) => <button key={label} className="ain-button" disabled={busy} onClick={() => { setDraft(text); void query.submit(text, scenario); }}>{label}</button>)}
+      ].map(([label, text]) => <button key={label} className="ain-button" disabled={busy} onClick={() => { setDraft(text); void query.submit(text, scenario, scopeWindow); }}>{label}</button>)}
     </div>
     <form className="ain-query-form" onSubmit={event => { event.preventDefault(); send(); }}>
       <label className="ain-input-label" htmlFor="ain-question">输入问题</label>

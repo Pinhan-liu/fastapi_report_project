@@ -4,18 +4,16 @@
 }
 
 .ain-spatial-stage {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  flex: 1;
-  min-height: 260px;
-  background: #171d30;
+  display: block;
+  background: #141a29;
+  overflow: hidden;
 }
 
 .ain-spatial-svg {
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 480 / 400;
 }
 
 .ain-spatial-empty {
@@ -43,7 +41,7 @@
   font-size: 15px;
   font-weight: 600;
   paint-order: stroke;
-  stroke: #171d30;
+  stroke: #141a29;
   stroke-width: 3px;
   pointer-events: none;
 }
@@ -57,7 +55,7 @@
   fill: #c9dce6;
   font-size: 13px;
   paint-order: stroke;
-  stroke: #171d30;
+  stroke: #141a29;
   stroke-width: 3px;
   pointer-events: none;
 }
@@ -72,6 +70,15 @@
   stroke: #efab65;
   stroke-width: 3;
   opacity: 1;
+}
+
+.ain-topology-weight {
+  fill: #9db4c4;
+  font-size: 11px;
+  paint-order: stroke;
+  stroke: #141a29;
+  stroke-width: 3px;
+  pointer-events: none;
 }
 
 .ain-spatial-footer {
@@ -127,12 +134,17 @@
 }
 
 .ain-key-ap {
-  background: #7ec7bc;
-  border-radius: 2px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-bottom: 9px solid #e74c3c;
+  background: none;
 }
 
 .ain-key-ue {
-  border: 1.5px solid #8eb8d0;
+  background: #2ecc71;
+  border: none;
   border-radius: 50%;
 }
 
@@ -164,6 +176,6 @@
 
 @media (max-width: 760px) {
   .ain-spatial-stage {
-    min-height: 220px;
+    min-height: 0;
   }
 }

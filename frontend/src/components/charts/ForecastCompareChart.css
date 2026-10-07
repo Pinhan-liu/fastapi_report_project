@@ -1,0 +1,32 @@
+.ain-forecast-section {
+  margin-top: 12px;
+}
+
+.ain-forecast-section .ain-section-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.ain-forecast-section .ain-section-heading h2 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.ain-forecast-section .ain-section-heading p {
+  color: #74888f;
+  font-size: 11px;
+}
+
+.ain-forecast-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 1100px) {
+  .ain-forecast-grid {
+    grid-template-columns: 1fr;
+  }
+}

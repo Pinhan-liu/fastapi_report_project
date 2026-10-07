@@ -14,7 +14,7 @@ body:has(.ain-app) {
 
 .ain-app {
   min-height: 100vh;
-  background: #f1f7f6;
+  background: #e8eef0;
   color: #253e46;
   color-scheme: light;
   font-family: Inter, "Microsoft YaHei", system-ui, sans-serif;
@@ -110,9 +110,14 @@ body:has(.ain-app) {
 }
 
 .ain-page-heading h1 {
-  font-size: 26px;
+  font-size: 28px;
   line-height: 1.35;
   margin-bottom: 8px;
+  background: linear-gradient(135deg, #187c79 0%, #2a9d8f 60%, #3aa6a0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #187c79;
 }
 
 .ain-heading-controls {
@@ -128,8 +133,9 @@ body:has(.ain-app) {
   flex-wrap: wrap;
   padding: 13px 16px;
   background: #fff;
-  border: 1px solid #dce6e8;
-  border-radius: 11px;
+  border: 1px solid #e2e9eb;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(23, 29, 48, 0.03), 0 6px 18px rgba(23, 29, 48, 0.05);
   margin-bottom: 20px;
   font-size: 12px;
   color: #71858e;
@@ -160,15 +166,9 @@ body:has(.ain-app) {
 
 .ain-workbench-grid {
   display: grid;
-  grid-template-columns:
-    minmax(0, 1fr)
-    clamp(290px, 25vw, 350px);
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
   align-items: start;
-}
-
-.ain-workbench-grid.ain-panel-closed {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 .ain-data-column {
@@ -178,8 +178,9 @@ body:has(.ain-app) {
 .ain-summary-slot,
 .ain-evidence-slot {
   background: #fff;
-  border: 1px solid #dce6e8;
-  border-radius: 12px;
+  border: 1px solid #e2e9eb;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(23, 29, 48, 0.03), 0 6px 18px rgba(23, 29, 48, 0.05);
   padding: 17px 18px;
 }
 
@@ -212,15 +213,17 @@ body:has(.ain-app) {
 }
 
 .ain-chart-slot {
-  border: 1px solid #dce6e8;
-  border-radius: 12px;
+  border: 1px solid #e2e9eb;
+  border-radius: 14px;
   overflow: hidden;
   background: #fff;
+  box-shadow: 0 1px 2px rgba(23, 29, 48, 0.03), 0 6px 18px rgba(23, 29, 48, 0.05);
   min-width: 0;
 }
 
 .ain-slot-heading {
-  padding: 13px 14px;
+  padding: 14px 16px;
+  border-left: 3px solid #187c79;
 }
 
 .ain-slot-heading p {
@@ -235,11 +238,12 @@ body:has(.ain-app) {
   place-items: center;
   color: #a4b9c5;
   font-size: 12px;
-  background-color: #171d30;
+  background-color: #141a29;
   background-image:
     linear-gradient(#ffffff06 1px, transparent 1px),
     linear-gradient(90deg, #ffffff06 1px, transparent 1px);
   background-size: 36px 36px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 .ain-small-charts .ain-slot-heading {
@@ -266,14 +270,17 @@ body:has(.ain-app) {
   min-height: 160px;
 }
 
-.ain-side-panel {
-  position: sticky;
-  top: 20px;
-  min-width: 0;
+.ain-top-panel {
+  margin-bottom: 20px;
   background: #fff;
-  border: 1px solid #dce6e8;
-  border-radius: 12px;
+  border: 1px solid #e2e9eb;
+  border-radius: 14px;
+  box-shadow: 0 1px 2px rgba(23, 29, 48, 0.03), 0 6px 18px rgba(23, 29, 48, 0.05);
   padding: 18px;
+}
+
+.ain-panel-heading h2 {
+  margin: 0;
 }
 
 .ain-panel-heading span {
@@ -283,11 +290,46 @@ body:has(.ain-app) {
   margin-top: 3px;
 }
 
+.ain-top-panel-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 14px;
+}
+
+.ain-top-panel-side {
+  min-width: 0;
+}
+
+.ain-top-panel-chat {
+  min-width: 0;
+  border-left: 1px solid #e6eeef;
+  padding-left: 18px;
+}
+
 .ain-object-details {
   background: #e9f3f0;
   border-radius: 9px;
   padding: 13px;
   margin: 16px 0;
+}
+
+.ain-object-details h3 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ain-panel-ue-select {
+  color: #29454d;
+  background: #fff;
+  border: 1px solid #cfdfdd;
+  border-radius: 7px;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 12px;
 }
 
 .ain-object-details dl {
@@ -319,7 +361,7 @@ body:has(.ain-app) {
   margin: 15px 0 7px;
 }
 
-.ain-side-panel textarea {
+.ain-top-panel textarea {
   width: 100%;
   resize: vertical;
   padding: 11px;
@@ -329,11 +371,6 @@ body:has(.ain-app) {
   color: #73888f;
   font-family: inherit;
   font-size: 12px;
-}
-
-.ain-side-panel > button {
-  width: 100%;
-  margin-top: 10px;
 }
 
 .ain-management-slot {
@@ -357,9 +394,10 @@ body:has(.ain-app) {
   flex-wrap: wrap;
   margin-top: 20px;
   padding: 14px 16px;
-  border: 1px solid #dce6e8;
-  border-radius: 11px;
+  border: 1px solid #e2e9eb;
+  border-radius: 14px;
   background: #fff;
+  box-shadow: 0 1px 2px rgba(23, 29, 48, 0.03), 0 6px 18px rgba(23, 29, 48, 0.05);
 }
 
 .ain-bottom-actions span {
@@ -460,8 +498,15 @@ body:has(.ain-app) {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .ain-side-panel {
-    position: static;
+  .ain-top-panel-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ain-top-panel-chat {
+    border-left: 0;
+    padding-left: 0;
+    border-top: 1px solid #e6eeef;
+    padding-top: 16px;
   }
 
   .ain-page-heading {

@@ -64,21 +64,23 @@ def parse_intent(text: str) -> dict:
 def rule_intent(message: str) -> dict:
     """关键词规则版（fallback：LLM 挂了/超时/输出乱时用，保住核心链路可用）
     第2周升级：①场景关键词提取（校园/商场/体育馆）②研判/热力/拓扑关键词扩充，
-    让降级结果从"答非所问"变为"基本答对"。"""
+    让降级结果从"答非所问"变为"基本答对"。
+    第4周：返回 hit 标记 —— 真正命中某类意图为 True；
+    未命中任何关键词兜底 query_kpi 为 False，供上层判断是否值得再调 LLM 增强。"""
     # ① 提取场景（与 CSV 场景一致），用户没提场景则为空 → 上层回退默认
     scenario = next((s for s in ("校园", "商场", "体育馆") if s in message), None)
     params = {"scenario": scenario} if scenario else {}
     # ② 明确的工具意图优先（避免"信号热力图"被宽泛的"信号/看看"关键词抢成研判）
     if "热力" in message or "信号分布" in message or "覆盖图" in message or "覆盖热" in message:
-        return {"intent": "get_heatmap", "params": params}
+        return {"intent": "get_heatmap", "params": params, "hit": True}
     if "拓扑" in message or "基站" in message or "连接关系" in message:
-        return {"intent": "get_topology", "params": params}
+        return {"intent": "get_topology", "params": params, "hit": True}
     # ③ 研判关键词（含"覆盖/弱"，覆盖问题归研判；"AP"本身不构成拓扑意图）
     anomaly_keywords = ["异常", "问题", "故障", "卡", "不好", "差", "掉线", "信号", "网络",
                         "体验", "质量", "稳定", "怎么样", "什么情况", "看看", "拥塞", "弱", "覆盖"]
     if any(k in message for k in anomaly_keywords):
-        return {"intent": "fault_diagnosis", "params": params}
-    return {"intent": "query_kpi", "params": params}
+        return {"intent": "fault_diagnosis", "params": params, "hit": True}
+    return {"intent": "query_kpi", "params": params, "hit": False}
 
 
 def get_intent(message: str) -> dict:
