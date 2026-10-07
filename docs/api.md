@@ -16,6 +16,7 @@ Base URL: http://localhost:8000
 |7|GET|/api/data/realtime|实时增量监测数据|
 |8|GET|/api/predict/result|时序预测结果查询（契约v1·占位实现）|
 |9|GET|/api/network/topology/enhanced|拓扑增强数据（契约v1）|
+|10|POST|/api/analyze/forecast|区域信号/频谱态势预测（Prophet 时序模型）|
 
 ## 通用响应格式
 成功: {"code": 0, "message": "success", "data": {...}}
@@ -460,3 +461,80 @@ GET /api/network/topology/enhanced?scenario=校园&time=2026-01-01 10:00:00
 错误码：复用全局错误码体系——参数缺失 40001、格式非法 40002、范围越界 40003、服务异常 50001。
 
 > 契约状态说明：接口 8、接口 9 契约 v1 已冻结，后续模型接入（Prophet/LSTM）与前端联调均以本契约为准；字段变更需走契约评审。
+
+## 接口 10：区域信号/频谱态势预测（Prophet 时序模型）
+
+POST /api/analyze/forecast
+
+功能：对每个 UE × 指标（rsrp/sinr/throughput）做 1 小时桶聚合，前 80% 训练 Prophet 模型、后 20% 测试评估（输出 predicted 与 MAPE），并在测试段之后延伸 24 小时未来预测（含置信区间 lower/upper）。与接口 8（/api/predict/result，契约 v1 占位）的区别：本接口为**已接入真实 Prophet 模型的预测数据源**，接口 8 是前端预测结果查询契约的占位实现，模型就绪后可按契约替换。
+
+### 请求
+
+```json
+{
+  "scenario": "校园",
+  "window_start": "2026-01-01 00:00:00",
+  "window_end": "2026-01-31 23:59:59"
+}
+```
+
+|参数|类型|必填|说明|
+|---|---|---|---|
+|scenario|string|是|业务场景，如 校园（与 VALID_SCENARIOS 白名单一致）|
+|window_start|string|是|分析窗口起始，格式 yyyy-MM-dd HH:mm:ss|
+|window_end|string|是|分析窗口结束，格式 yyyy-MM-dd HH:mm:ss|
+
+### 响应
+
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "scenario": "校园",
+    "window_start": "2026-01-01 00:00:00",
+    "window_end": "2026-01-31 23:59:59",
+    "method": "prophet",
+    "bin_size_min": 60,
+    "metrics": ["rsrp", "sinr", "throughput"],
+    "ues": ["UE-01", "UE-02", "UE-03"],
+    "series": {
+      "UE-01": {
+        "rsrp": {
+          "true_mean": -92.43,
+          "pred_mean": -91.92,
+          "mape": 0.55,
+          "bins": ["2026-01-01 00:00", "...", "2026-01-30 23:00"],
+          "true": [-92.1, "...", -93.0],
+          "predicted": [-91.8, "...", -92.2],
+          "forecast_bins": ["2026-01-31 00:00", "...", "2026-01-31 23:00"],
+          "forecast": [-91.6, "...", -92.4],
+          "lower": [-95.6, "...", -96.1],
+          "upper": [-84.4, "...", -85.2]
+        }
+      }
+    }
+  }
+}
+```
+
+### 字段说明
+
+|字段|类型|说明|
+|---|---|---|
+|method|string|预测模型：prophet；Prophet 不可用时自动降级为 moving_average（接口不崩）|
+|bin_size_min|int|聚合桶粒度，固定 60（1 小时）|
+|metrics / ues|array|本次预测的指标与 UE 列表|
+|series[ue][metric]|object|单个 UE × 指标的预测结果|
+|bins / true|array|全量 1 小时桶实测序列（前端对比图横轴与实测线）|
+|predicted|array|测试段（后 20%）预测值，24 点，与真实值对比用|
+|true_mean / pred_mean / mape|number|测试段实测均值 / 预测均值 / 平均绝对百分比误差（%）|
+|forecast_bins / forecast|array|未来 24 小时预测的时间轴与预测值|
+|lower / upper|array|未来 24 小时置信区间下 / 上限（与 forecast 等长）|
+
+### 备注
+
+- 训练/测试切分固定 80/20；未来延伸固定 24 小时；序列不足 24 个点或 Prophet 拟合失败时自动降级 moving_average
+- 数据源为 30 天仿真数据（`data/network_data_30d(1).csv`，main.py 默认读取；3d 版备份为 `data/network_data_3d_bak.csv`）
+- 30d 数据第 4 天起每 2 天注入一组故障，anomaly 演示窗口请选择 1 月 4 日之后以观察到异常样本
+- 错误码：复用全局错误码体系——参数缺失 40001、格式非法 40002、范围越界 40003、服务异常 50001
