@@ -480,15 +480,61 @@ def tool_query_kpi(scenario: str, win_start: str | None = None, win_end: str | N
             "query_ref": {"scenario": scenario}}
 
 # ---- 工具2：故障研判（意图 → 确定性规则引擎=接口2，LLM 不参与计算，规避幻觉） ----
+def _build_fault_reply(d: dict, scenario: str, win_start: str, win_end: str) -> str:
+    """故障研判文案：LLM 润色四段式（发现问题/判断依据/候选原因与不确定性/下一步验证）；
+    LLM 不可用或异常时降级为同结构模板。数字与结论全部来自规则引擎 d，LLM 只负责表达、不编数据。"""
+    ap = "、".join(d.get("affected_aps") or ["未知AP"])
+    cand = d.get("candidates") or []
+    cand_txt = "；".join(
+        f"候选{c.get('rank')}：{c.get('cause')}（置信度{c.get('confidence', '-')}）" for c in cand
+    ) or "暂无候选原因分解"
+    # ---- 降级模板：本身就是四段式，LLM 挂了回复结构也不崩 ----
+    if not d.get("is_anomaly"):
+        return (f"【发现问题】{scenario} {win_start}~{win_end} 时段，未检测到明显异常。\n"
+                f"【判断依据】{d.get('cause', '各项指标均在正常范围')}。\n"
+                f"【下一步】持续监测即可；如指标出现波动，可重新发起研判。")
+    fallback = (
+        f"【发现问题】{scenario} {win_start}~{win_end} 时段，{ap} 被判定存在{d.get('anomaly_type')}"
+        f"（严重程度：{d.get('level')}）。\n"
+        f"【判断依据】{d.get('cause')}。\n"
+        f"【候选原因与限制】{cand_txt}。上述为按指标关联推出的候选解释，尚未取得现场配置与环境数据，"
+        f"不能确认为根因；干扰与负荷因素仍需排查。\n"
+        f"【下一步验证】{d.get('suggestion')}。建议先核对现场配置与环境变化，再针对候选原因准备验证；"
+        f"验证后比较覆盖分布、相关指标与连接关系，判断是否改善及是否引入新问题。"
+    )
+    # ---- LLM 润色：只喂结构化证据，禁止它编数据 ----
+    try:
+        import json as _json
+        evidence = {
+            "scenario": scenario, "window": [win_start, win_end],
+            "anomaly_type": d.get("anomaly_type"), "level": d.get("level"),
+            "confidence": d.get("confidence"), "affected_aps": d.get("affected_aps"),
+            "conclusion": d.get("cause"), "suggestion": d.get("suggestion"),
+            "kpi_evidence": d.get("kpi_evidence"), "candidates": cand,
+        }
+        sys_prompt = (
+            "你是无线网络运维分析助手。下面是后端规则引擎对某时段网络异常的结构化研判结果（JSON）。"
+            "请把它改写成给运维人员看的中文分析回复，严格按四段输出，每段一个小标题：\n"
+            "【发现问题】哪个AP、什么异常、严重程度。\n"
+            "【判断依据】引用JSON里的指标数值，解释这些数据为什么支持该判断。\n"
+            "【候选原因与限制】按优先级列出候选原因，明确这是候选解释而非已确认根因，说明还有哪些因素待排查。\n"
+            "【下一步验证】先核查什么、再怎么验证、验证时对比哪些指标。\n"
+            "硬性要求：只能使用JSON中的数值与事实，禁止编造任何数据/AP编号/阈值；不要输出JSON或寒暄，只输出四段正文。"
+        )
+        out = llm_agent.call_llm_chat(sys_prompt, _json.dumps(evidence, ensure_ascii=False))
+        if out and len(out) > 30:
+            return out
+    except Exception as e:
+        print(f"[Main] LLM研判润色失败，降级模板：{e}")
+    return fallback
+
+
 def tool_fault_diagnosis(scenario: str, win_start: str | None = None, win_end: str | None = None) -> dict:
     win_start, win_end = win_start or TOOL_WINDOW_START, win_end or TOOL_WINDOW_END
     an = analyze_anomaly(AnomalyRequest(scenario=scenario,
                                         window_start=win_start, window_end=win_end))
     d = an["data"]
-    if d.get("is_anomaly"):
-        reply = f"检测到{d['anomaly_type']}（{d['level']}）：{d['cause']}。建议：{d['suggestion']}。"
-    else:
-        reply = f"当前时段未发现明显异常：{d.get('cause', d.get('reason', '暂无数据'))}。"
+    reply = _build_fault_reply(d, scenario, win_start, win_end)
     chart = {
         "type": "line",
         "option": {
