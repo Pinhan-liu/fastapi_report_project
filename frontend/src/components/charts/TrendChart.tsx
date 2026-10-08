@@ -2,7 +2,7 @@ import type { EChartsOption } from "echarts";
 import type { DashboardData, MetricKey } from "../../types/backend";
 import { METRIC_META } from "../../types/backend";
 import { getUEHistory, displayMetric } from "../../services/metrics";
-import ChartPanel, { AXIS_STYLE, CHART_BACKGROUND } from "./ChartPanel";
+import ChartPanel, { AXIS_STYLE, CHART_BACKGROUND, CHART_FONT } from "./ChartPanel";
 
 const ITEMS: { key: MetricKey; title: string; className: string }[] = [
   {
@@ -39,7 +39,8 @@ export default function TrendChart({
           const option: EChartsOption = {
             animation: false,
             backgroundColor: CHART_BACKGROUND,
-            grid: { left: 40, right: 25, top: 23, bottom: 30 },
+            textStyle: { fontFamily: CHART_FONT },
+            grid: { left: 12, right: 36, top: 25, bottom: 8, containLabel: true },
             tooltip: {
               trigger: "axis",
               renderMode: "richText",
@@ -74,16 +75,19 @@ export default function TrendChart({
               {
                 name: title,
                 type: "line",
-                symbolSize: 6,
+                symbolSize: 3,
                 smooth: false,
                 connectNulls: false,
-                itemStyle: { color: "#69bed1" },
-                lineStyle: { width: 2 },
+                itemStyle: { color: "#72e6f3" },
+                lineStyle: { color: "#72e6f3", width: 1.6 },
+                areaStyle: { color: "rgba(76, 212, 236, 0.08)" },
                 label: {
                   show: true,
                   position: "top",
-                  color: "#cae7ee",
-                  fontSize: 10,
+                  color: "#e3f8ff",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  fontFamily: CHART_FONT,
                   formatter: (params) =>
                     params.dataIndex === history.length - 1
                       ? displayMetric(history.at(-1)?.[key])
@@ -102,7 +106,7 @@ export default function TrendChart({
               title={title}
               description={`${unit} · ${history.length ? "实际采样间隔" : "暂无历史数据"}`}
               option={option}
-              height={190}
+              height={130}
               className={className}
             />
           );

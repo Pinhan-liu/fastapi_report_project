@@ -1,10 +1,13 @@
+import type { DiagnosisHandle } from "../../components/analysis/DiagnosisModule";
 import { useEffect, useRef, useState } from "react";
 import { analyzeNetwork, CASE_WINDOWS, DEFAULT_SCOPE, fetchForecast, loadDashboard, scopeLabel } from "../../services/backend";
 import type { DashboardData, Diagnosis, ForecastResult, QueryScope } from "../../types/backend";
 import { displayMetric, getLatestFrame } from "../../services/metrics";
 import useNetworkQuery from "../../hooks/useNetworkQuery";
 import QueryPanel from "../../chat/QueryPanel";
-import EvidencePanel from "../../components/analysis/EvidencePanel";
+import DiagnosisModule from "../../components/analysis/DiagnosisModule";
+import type { ManagementHandle } from "../../components/management/preparePlan";
+import ManagementModule from "../../components/management/ManagementModule";
 import ToolResultPanel from "../../components/analysis/ToolResultPanel";
 import KpiSummary from "../../components/charts/KpiSummary";
 import RadioMapChart from "../../components/charts/RadioMapChart";
@@ -32,6 +35,8 @@ export default function WorkbenchPage() {
   const [forecastError, setForecastError] = useState("");
   const analysisController = useRef<AbortController | null>(null);
   const query = useNetworkQuery();
+  const diagnosisRef = useRef<DiagnosisHandle>(null);
+  const managementRef = useRef<ManagementHandle>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -89,61 +94,173 @@ export default function WorkbenchPage() {
   function timeInput(value: string) {
     return value.replace("T", " ") + (value.length === 16 ? ":00" : "");
   }
-  return <main className="ain-workbench">
-    <div className="ain-page-heading"><div><p className="ain-eyebrow">OBSERVE / EXPLAIN / MANAGE</p><h1>网络分析与管理</h1><p className="ain-muted">采样分布、连接与指标联动；围绕候选原因组织证据。</p></div>
-      <div className="ain-heading-controls"><button className="ain-button" disabled={loading} onClick={() => setScope({ ...scope })}>重新载入</button></div>
-    </div>
-    <form className="ain-scope-form" onSubmit={event => { event.preventDefault(); setScope({ ...draft }); }}>
-      <label>场景<select value={draft.scenario} onChange={e => setDraft(v => ({ ...v, scenario: e.target.value }))}>{["校园", "商场", "体育馆"].map(s => <option key={s}>{s}</option>)}</select></label>
-      <label>演示时段<select value={caseIndex} onChange={e => { const value = e.target.value; setCaseIndex(value); const item = CASE_WINDOWS[Number(value)]; if (item) setDraft(v => ({ ...v, start: item.start, end: item.end })); }}>
-        {CASE_WINDOWS.map((c, i) => <option key={c.label} value={String(i)}>{c.label}</option>)}<option value="custom">自定义范围</option>
-      </select></label>
-      <label>开始时间<input type="datetime-local" step="1" required value={draft.start.replace(" ", "T")} onChange={e => { setCaseIndex("custom"); setDraft(v => ({ ...v, start: timeInput(e.target.value) })); }} /></label>
-      <label>结束时间<input type="datetime-local" step="1" required value={draft.end.replace(" ", "T")} onChange={e => { setCaseIndex("custom"); setDraft(v => ({ ...v, end: timeInput(e.target.value) })); }} /></label>
-      <button className="ain-button ain-primary">加载所选范围</button><p>北京时间 · CSV 仅有校园 2026-01-01—01-03 · 预设名称用于演示，最终判定由后端计算</p>
-    </form>
-    {loading && <p className="ain-load-state" role="status">正在读取所选范围的记录与拓扑…</p>}
-    {error && <div className="ain-error" role="alert"><p>{error}</p><button className="ain-button" onClick={() => setScope({ ...scope })}>重试</button></div>}
-    {!loading && !error && !data && <div className="ain-load-state"><h2>所选场景与时间段暂无数据</h2><p>{scopeLabel(scope)}</p><p>请切回校园已有时间段。当前文件没有商场和体育馆的数据。</p></div>}
-    {data && <>
-      <section id="ain-management-panel" className="ain-top-panel" aria-label="分析与管理面板">
-        <div className="ain-panel-heading"><h2>分析与管理</h2><span>输入问题，AI 返回研判 / 热力图 / 拓扑结果，结果与当前展示窗口口径一致</span></div>
-        <div className="ain-top-panel-grid">
-          <div className="ain-top-panel-side">
-            <section className="ain-object-details"><h3>指标对象
-              <select id="ain-panel-ue" className="ain-panel-ue-select" value={selectedUeId} onChange={e => selectUE(e.target.value)}>{ues.map(n => <option key={n.id}>{n.id}</option>)}</select>
-            </h3><dl>
-              <div><dt>服务 AP</dt><dd>{serving.map(l => l.source).join("、") || "无"}</dd></div>
-              <div><dt>最新 RSRP</dt><dd>{displayMetric(latest?.rsrpDbm)} dBm</dd></div>
-              <div><dt>最新 SINR</dt><dd>{displayMetric(latest?.sinrDb)} dB</dd></div>
-              <div><dt>最新吞吐量</dt><dd>{displayMetric(latest?.throughputMbps)} Mbps</dd></div>
-              <div><dt>采样时间</dt><dd>{latest?.backendTime || "暂无数据"}</dd></div>
-            </dl></section>
-            {focused && <section className="ain-object-details ain-ap-focus"><h3>拓扑关注 / {focused.id}</h3><p>坐标：({focused.x}, {focused.y}) m</p><div className="ain-ap-ue-buttons">{data.links.filter(l => l.source === focused.id).map(l => <button key={l.id} className="ain-button" onClick={() => selectUE(l.target)}>{l.target} / {displayMetric(l.throughput)} Mbps</button>)}</div></section>}
-            <section className="ain-management-slot"><h3>动态管理 / 仿真验证</h3><p className="ain-muted">配置修改、仿真运行及前后对比属于后续管理接口，本批先完成观测与故障展示。</p><button className="ain-button" disabled>管理接口待接入</button></section>
-          </div>
-          <div className="ain-top-panel-chat">
-            <QueryPanel query={query} scenario={data.scope.scenario} window={data.scope} disabled={loading} />
-            <ToolResultPanel result={query.result} />
-          </div>
+  return (
+    <main className="ain-workbench">
+      <div className="ain-workbench-title">
+        <div>
+          <h1>现存问题 · 网络分析与管理</h1>
+          <p>观察指标与连接，围绕具体异常核查原因。</p>
         </div>
-      </section>
-      <div className="ain-data-bar"><span className="ain-source-badge">CSV 仿真历史数据</span><span>{data.metrics.length} 条记录</span><span>{data.nodes.filter(n => n.type === "ap").length} AP / {ues.length} UE</span><span>最新采样：{data.metrics.at(-1)?.backendTime}</span>
-        <p className="ain-loaded-scope">已加载：{scopeLabel(data.scope)}</p>
+        <span className="ain-source-badge">后端接口数据</span>
       </div>
-      <div className="ain-workbench-grid">
-        <div className="ain-data-column">
-          <KpiSummary data={data} ueId={selectedUeId} />
-          <div className="ain-main-grid"><div className="ain-large-charts">
+
+      <nav className="ain-workflow-nav" aria-label="工作台功能流程">
+        <a className="ain-workflow-ai" href="#ain-ai-module"><span>01</span><strong>AI 对话交互</strong><small>描述问题</small></a>
+        <a href="#ain-data-module"><span>02</span><strong>数据展示</strong><small>观察指标与图表</small></a>
+        <a href={data ? "#ain-diagnosis-module" : undefined} aria-disabled={!data}><span>03</span><strong>故障研判与证据</strong><small>核查原因与依据</small></a>
+        <a href={data ? "#ain-management-panel" : undefined} aria-disabled={!data}><span>04</span><strong>操作建议与效果验证</strong><small>准备方案与验证</small></a>
+      </nav>
+
+      <QueryPanel
+        query={query}
+         scenario={data?.scope.scenario || scope.scenario}
+         window={data?.scope || scope}
+         disabled={!data || loading}
+         onViewDiagnosis={() => diagnosisRef.current?.showChat()}
+       />
+
+      <section className="ain-data-module ain-feature-module" id="ain-data-module" aria-labelledby="ain-data-title">
+        <header className="ain-feature-heading ain-data-heading">
+          <span className="ain-module-number" aria-hidden="true">02</span>
+          <div className="ain-module-title">
+            <h2 className="ain-feature-title" id="ain-data-title">数据展示</h2>
+            <p>加载范围 → 选择对象 → 观察指标、地图与趋势</p>
+          </div>
+          <span className="ain-feature-context">为研判提供观测依据</span>
+        </header>
+      <section className="ain-filter-panel" aria-label="数据范围与来源">
+        <form
+          className="ain-scope-form"
+          onSubmit={event => {
+            event.preventDefault();
+            setScope({ ...draft });
+          }}
+        >
+          <label>场景
+            <select value={draft.scenario} onChange={event => setDraft(value => ({ ...value, scenario: event.target.value }))}>
+              {["校园", "商场", "体育馆"].map(item => <option key={item}>{item}</option>)}
+            </select>
+          </label>
+          <label>演示时段
+            <select value={caseIndex} onChange={event => {
+              const value = event.target.value;
+              setCaseIndex(value);
+              const item = CASE_WINDOWS[Number(value)];
+              if (item) setDraft(previous => ({ ...previous, start: item.start, end: item.end }));
+            }}>
+              {CASE_WINDOWS.map((item, index) => <option key={item.label} value={String(index)}>{item.label}</option>)}
+              <option value="custom">自定义范围</option>
+            </select>
+          </label>
+          <label>开始时间
+            <input type="datetime-local" step="1" required value={draft.start.replace(" ", "T")} onChange={event => {
+              setCaseIndex("custom");
+              setDraft(value => ({ ...value, start: timeInput(event.target.value) }));
+            }} />
+          </label>
+          <label>结束时间
+            <input type="datetime-local" step="1" required value={draft.end.replace(" ", "T")} onChange={event => {
+              setCaseIndex("custom");
+              setDraft(value => ({ ...value, end: timeInput(event.target.value) }));
+            }} />
+          </label>
+          <button className="ain-button ain-primary" disabled={loading}>加载所选范围</button>
+          <button type="button" className="ain-button ain-reload" disabled={loading} onClick={() => setScope({ ...scope })}>重新载入</button>
+        </form>
+        <p className="ain-filter-note">
+           数据范围：2026-01-01 至 2026-01-30（北京时间）；
+          当前仅支持校园场景，单次最多查询3天。
+        </p>
+        {data && <div className="ain-data-bar">
+          <span className="ain-source-badge">CSV 仿真历史数据</span>
+          <span>{data.metrics.length} 条记录</span>
+          <span>{data.nodes.filter(node => node.type === "ap").length} AP / {ues.length} UE</span>
+          <span>最新采样：{data.metrics.at(-1)?.backendTime}</span>
+          <p className="ain-loaded-scope">已加载：{scopeLabel(data.scope)}</p>
+        </div>}
+      </section>
+
+      {loading && <p className="ain-load-state" role="status">正在读取所选范围的记录与拓扑…</p>}
+      {error && <div className="ain-error" role="alert">
+        <p>{error}</p>
+        <button className="ain-button" onClick={() => setScope({ ...scope })}>重试</button>
+      </div>}
+      {!loading && !error && !data && <div className="ain-load-state">
+        <h2>所选场景与时间段暂无数据</h2>
+        <p>{scopeLabel(scope)}</p>
+        <p>请切回校园已有时间段。当前文件没有商场和体育馆的数据。</p>
+      </div>}
+
+      {data && <>
+        <section className="ain-object-bar" aria-label="当前指标对象">
+          <label htmlFor="ain-panel-ue">指标对象
+            <select id="ain-panel-ue" value={selectedUeId} onChange={event => selectUE(event.target.value)}>
+              {ues.map(node => <option key={node.id}>{node.id}</option>)}
+            </select>
+          </label>
+          <span>服务 AP <strong>{serving.map(link => link.source).join("、") || "无"}</strong></span>
+          <span>对象采样：{latest?.backendTime || "暂无数据"}</span>
+          <p>选择 UE 联动指标与图表；故障研判仍按已加载场景内各 AP 分析。</p>
+        </section>
+
+        {focused && <section className="ain-ap-focus-bar" aria-label="当前关注 AP">
+          <span>关注 <strong>{focused.id}</strong> · 坐标 ({focused.x}, {focused.y}) m</span>
+          <div className="ain-ap-ue-buttons">
+            {data.links.filter(link => link.source === focused.id).map(link => (
+              <button key={link.id} className="ain-button" onClick={() => selectUE(link.target)}>
+                {link.target} / {displayMetric(link.throughput)} Mbps
+              </button>
+            ))}
+          </div>
+          <button className="ain-button" onClick={() => setFocusedApId(null)}>取消关注</button>
+        </section>}
+
+        <KpiSummary data={data} ueId={selectedUeId} />
+
+        <div className="ain-main-grid">
+          <div className="ain-large-charts">
             <RadioMapChart data={data} ueId={selectedUeId} focusedApId={focusedApId} onSelectUE={selectUE} onFocusAP={focusAP} />
             <TopologyChart data={data} ueId={selectedUeId} focusedApId={focusedApId} onSelectUE={selectUE} onFocusAP={focusAP} />
-          </div><MetricCharts data={data} ueId={selectedUeId} onSelect={selectUE} /></div>
-          <EvidencePanel result={diagnosis} pending={analyzing} error={analysisError} />
-          <div className="ain-trend-slot"><TrendChart data={data} ueId={selectedUeId} /></div>
-          <ForecastCompareChart forecast={forecast} pending={forecastLoading} error={forecastError} />
+          </div>
+          <MetricCharts data={data} ueId={selectedUeId} onSelect={selectUE} />
         </div>
-      </div>
-      <div className="ain-bottom-actions"><button className="ain-button ain-primary" disabled={loading || analyzing} onClick={() => void analyze()}>{analyzing ? "正在分析…" : "分析当前时间段"}</button><button className="ain-button" disabled>运行仿真</button><button className="ain-button" disabled>对比方案</button><button className="ain-button" disabled>保存分析</button><span className="ain-muted">分析范围为已加载场景内各 AP；点击 UE 只切换指标对象。</span></div>
-    </>}
-  </main>;
+
+        <div className="ain-trend-slot">
+          <TrendChart data={data} ueId={selectedUeId} />
+        </div>
+
+        <ForecastCompareChart forecast={forecast} pending={forecastLoading} error={forecastError} />
+
+        {query.result?.chart && <ToolResultPanel result={query.result} />}
+
+      </>}
+      </section>
+
+      {data && <>
+        <DiagnosisModule
+          ref={diagnosisRef}
+          result={diagnosis}
+          pending={analyzing}
+          error={analysisError}
+          chatDiagnosis={query.result?.diagnosis || null}
+          scope={data.scope}
+          onAnalyze={() => void analyze()}
+          onPrepare={(input) => managementRef.current?.prepare(input)}
+        />
+
+        <div className="ain-module-handoff" aria-label="研判与操作区的衔接">
+          <div><strong>研判依据</strong><span aria-hidden="true">→</span><strong>方案草稿</strong><span aria-hidden="true">→</span><strong>基线与效果验证</strong></div>
+          <p>点击上方“根据此研判准备方案”，带入研判依据与可识别的目标 AP；核对参数后生成草稿并锁定基线。</p>
+        </div>
+
+        <ManagementModule
+          ref={managementRef}
+          data={data}
+          diagnosis={diagnosis}
+          chatDiagnosis={query.result?.diagnosis || null}
+          focusedApId={focusedApId}
+        />
+      </>}
+    </main>
+  );
 }

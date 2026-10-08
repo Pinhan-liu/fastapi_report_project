@@ -2,9 +2,12 @@ import type { ReactNode } from "react";
 import type { DashboardData, NetworkNode } from "../../types/backend";
 import "./SpatialCharts.css";
 
-// 两张图共用场景坐标，X/Y 均为米；保持两个方向的比例一致。
+// 两张图共用横向画布；X/Y 均为原始米制坐标，各自映射到对应显示轴。
 // area 取数据实际范围（min~max），坐标系直接贴合数据分布，不留零起点空白。
 // 图框尽量撑满画布，四周只留刻度标签所需的最小空间，两张图完全同尺寸对齐。
+const SCENE_FRAME = { width: 640, height: 300, left: 56, right: 24, top: 42, bottom: 48 };
+export const SCENE_VIEWBOX = `0 0 ${SCENE_FRAME.width} ${SCENE_FRAME.height}`;
+
 export function createProjection(area: DashboardData["area"]) {
   const { xMin, yMin, xMax, yMax } = area;
   const width = xMax - xMin;
@@ -16,20 +19,20 @@ export function createProjection(area: DashboardData["area"]) {
     height <= 0
   )
     return null;
-  // viewBox 480x400：左侧留 Y 轴刻度、右侧留轴名、顶部留 Y/m、底部留 X 刻度与 X/m
-  // 图框整体偏左下放置，避免视觉重心偏右上
-  const maxW = 480 - 56 - 24;
-  const maxH = 400 - 37 - 60;
-  const scale = Math.min(maxW / width, maxH / height);
-  const left = 56 + (maxW - width * scale) / 2;
-  const top = 37 + (maxH - height * scale) / 2;
+  // 仅改变像素显示范围；数据范围、越界判定和坐标值保持原样。
+  const maxW = SCENE_FRAME.width - SCENE_FRAME.left - SCENE_FRAME.right;
+  const maxH = SCENE_FRAME.height - SCENE_FRAME.top - SCENE_FRAME.bottom;
+  const scaleX = maxW / width;
+  const scaleY = maxH / height;
+  const left = SCENE_FRAME.left;
+  const top = SCENE_FRAME.top;
   return {
     left,
     top,
-    width: width * scale,
-    height: height * scale,
-    x: (value: number) => left + (value - xMin) * scale,
-    y: (value: number) => top + (yMax - value) * scale,
+    width: width * scaleX,
+    height: height * scaleY,
+    x: (value: number) => left + (value - xMin) * scaleX,
+    y: (value: number) => top + (yMax - value) * scaleY,
     contains: (point: { x: number; y: number }) =>
       Number.isFinite(point.x) &&
       Number.isFinite(point.y) &&
@@ -42,11 +45,11 @@ export function createProjection(area: DashboardData["area"]) {
 export type Projection = NonNullable<ReturnType<typeof createProjection>>;
 
 export const SIGNAL_BANDS = [
-  { label: "< −90", color: "#526aab" },
-  { label: "−90～−80", color: "#648fc3" },
-  { label: "−80～−70", color: "#6bb9cf" },
-  { label: "−70～−60", color: "#72c9b6" },
-  { label: "≥ −60", color: "#ade1ba" },
+  { label: "< −90", color: "#67768a" },
+  { label: "−90～−80", color: "#2e69d2" },
+  { label: "−80～−70", color: "#36b7f3" },
+  { label: "−70～−60", color: "#27d7d2" },
+  { label: "≥ −60", color: "#58edc6" },
 ];
 export function signalColor(value: number) {
   const index =
@@ -140,7 +143,7 @@ export function SceneNode({
   onSelect: (node: NetworkNode) => void;
 }) {
   const ap = node.type === "ap";
-  const color = selected ? "#efab65" : ap ? "#e74c3c" : "#2ecc71";
+  const color = selected ? "#ffbb4a" : ap ? "#ff5657" : "#22dfb6";
   return (
     <g
       className={`ain-scene-node${selected ? " is-selected" : ""}`}
@@ -163,17 +166,17 @@ export function SceneNode({
         <polygon
           points="0,-12 10,10 -10,10"
           fill={color}
-          stroke="#171d30"
+          stroke="#102036"
           strokeWidth={2}
         />
       ) : (
-        <circle r={8} fill={color} stroke="#171d30" strokeWidth={2} />
+        <circle r={8} fill={color} stroke="#102036" strokeWidth={2} />
       )}
       {(selected || highlighted) && (
         <circle
           r={22}
           fill="none"
-          stroke={selected ? "#efab65" : "#7ec7bc"}
+          stroke={selected ? "#ffbb4a" : "#65d5f5"}
           strokeWidth={1.5}
         />
       )}

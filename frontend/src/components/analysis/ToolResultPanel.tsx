@@ -1,46 +1,238 @@
 import type { EChartsOption } from "echarts";
 import type { ChatResult } from "../../types/backend";
 import { scopeLabel } from "../../services/backend";
-import ChartPanel, { AXIS_STYLE, CHART_BACKGROUND } from "../charts/ChartPanel";
-import EvidencePanel from "./EvidencePanel";
+import ChartPanel, {
+  AXIS_STYLE,
+  CHART_BACKGROUND,
+} from "../charts/ChartPanel";
+import "./ToolResultPanel.css";
 
-export default function ToolResultPanel({ result }: { result: ChatResult | null }) {
-  if (!result) return null;
-  const raw = result.chart?.option;
+export default function ToolResultPanel({
+  result,
+}: {
+  result: ChatResult | null;
+}) {
+  if (!result?.chart) return null;
+
+  const raw = result.chart.option;
+
   let option: EChartsOption | null = null;
   let title = "";
-  if (raw && result.chart?.type === "heatmap") {
-    title = "对话工具热力图";
-    option = { ...raw, animation: false, backgroundColor: CHART_BACKGROUND,
-      tooltip: { trigger: "item", renderMode: "richText", formatter: (p: unknown) => {
-        const values = (p as { value?: unknown }).value;
-        return Array.isArray(values) ? `网格索引 (${values[0]}, ${values[1]})\nRSRP ${Number(values[2]).toFixed(1)} dBm` : "无数据";
-      } },
-      xAxis: { ...(raw.xAxis as object), ...AXIS_STYLE },
-      yAxis: { ...(raw.yAxis as object), ...AXIS_STYLE },
-      visualMap: { ...(raw.visualMap as object), textStyle: { color: "#b5c7d5" } },
+  let description = "";
+
+  if (raw && result.chart.type === "heatmap") {
+    title = "信号热力图";
+    description = "UE 采样网格均值；空白网格无数据";
+
+    option = {
+      ...raw,
+      animation: false,
+      backgroundColor: CHART_BACKGROUND,
+      tooltip: {
+        trigger: "item",
+        renderMode: "richText",
+        formatter: (item: unknown) => {
+          const values = (item as { value?: unknown }).value;
+
+          if (!Array.isArray(values)) return "无数据";
+
+          const value = Number(values[2]);
+
+          return `网格索引 (${values[0]}, ${values[1]})\nRSRP ${
+            Number.isFinite(value) ? value.toFixed(1) : "—"
+          } dBm`;
+        },
+      },
+      xAxis: {
+        ...(raw.xAxis as object),
+        ...AXIS_STYLE,
+      },
+      yAxis: {
+        ...(raw.yAxis as object),
+        ...AXIS_STYLE,
+      },
+      visualMap: {
+        ...(raw.visualMap as object),
+        textStyle: { color: "#b5c7d5" },
+      },
     } as EChartsOption;
-  } else if (raw && result.chart?.type === "graph") {
-    title = "对话工具连接汇总";
-    const nodes = Array.isArray(raw.nodes) ? raw.nodes as { id: string; category: string }[] : [];
-    option = { animation: false, backgroundColor: CHART_BACKGROUND,
+  
+  } else if (raw && result.chart.type === "line") {
+    title = "网络指标时间趋势";
+    description = "按小时聚合的网络指标变化 · 历史数据";
+
+    // 读取后端返回的横轴时间
+    const rawXAxis = raw.xAxis as
+      { data?: unknown } | undefined;
+
+    const hours = Array.isArray(rawXAxis?.data)
+      ? rawXAxis.data.map(String)
+      : [];
+
+    // 读取后端返回的指标数据
+    const rawSeries = Array.isArray(raw.series)
+      ? raw.series
+      : [];
+
+    const lines = rawSeries.map(item => {
+      const s = (item && typeof item === "object"
+        ? item
+        : {}) as {
+          name?: unknown;
+          data?: unknown;
+        };
+
+      return {
+        name: typeof s.name === "string"
+          ? s.name
+          : "网络指标",
+        type: "line" as const,
+        smooth: false,
+        showSymbol: true,
+        symbolSize: 5,
+        lineStyle: {
+          width: 2,
+          color: "#72e6f3",
+        },
+        itemStyle: {
+          color: "#72e6f3",
+        },
+        data: Array.isArray(s.data)
+          ? s.data.map(value => {
+              if (
+                value === null ||
+                value === undefined ||
+                value === ""
+              ) {
+                return null;
+              }
+              const n = Number(value);
+              return Number.isFinite(n) ? n : null;
+            })
+          : [],
+      };
+    });
+
+    // 将数据转换成 ECharts 折线图配置
+    option = {
+      animation: false,
+      backgroundColor: CHART_BACKGROUND,
+      grid: {
+        left: 24,
+        right: 30,
+        top: 35,
+        bottom: 30,
+        containLabel: true,
+      },
+      tooltip: {
+        trigger: "axis",
+        renderMode: "richText",
+      },
+      xAxis: {
+        type: "category",
+        data: hours,
+        ...AXIS_STYLE,
+        axisLabel: {
+          ...AXIS_STYLE.axisLabel,
+          hideOverlap: true,
+          formatter: (value: string) =>
+            value.length >= 13 ? value.slice(5) : value,
+        },
+      },
+      yAxis: {
+        type: "value",
+        scale: true,
+        name: "dBm",
+        nameTextStyle: {
+          color: "#c3d5ee",
+        },
+        ...AXIS_STYLE,
+      },
+      series: lines,
+    } as EChartsOption;
+
+  } else if (raw && result.chart.type === "graph") {
+
+    title = "连接关系汇总";
+    description =
+      "全工具时间段内出现过的服务连接；非同一时刻拓扑";
+
+    const nodes = Array.isArray(raw.nodes)
+      ? (raw.nodes as { id: string; category: string }[])
+      : [];
+
+    option = {
+      animation: false,
+      backgroundColor: CHART_BACKGROUND,
       tooltip: { renderMode: "richText" },
-      series: [{ type: "graph", layout: "force", roam: true, force: { repulsion: 220 },
-        label: { show: true, color: "#d8e9ed", position: "right" },
-        lineStyle: { color: "#718b9d", width: 2 },
-        data: nodes.map(n => ({ id: n.id, name: n.id, symbolSize: n.category === "AP" ? 28 : 18,
-          itemStyle: { color: n.category === "AP" ? "#7ec7bc" : "#8eb8d0" } })),
-        links: Array.isArray(raw.links) ? raw.links as { source: string; target: string }[] : [],
-      }],
+      series: [
+        {
+          type: "graph",
+          layout: "force",
+          roam: true,
+          force: { repulsion: 220 },
+          label: {
+            show: true,
+            color: "#d8e9ed",
+            position: "right",
+          },
+          lineStyle: {
+            color: "#718b9d",
+            width: 2,
+          },
+          data: nodes.map((node) => ({
+            id: node.id,
+            name: node.id,
+            symbolSize: node.category === "AP" ? 28 : 18,
+            itemStyle: {
+              color:
+                node.category === "AP"
+                  ? "#7ec7bc"
+                  : "#8eb8d0",
+            },
+          })),
+          links: Array.isArray(raw.links)
+            ? (raw.links as {
+                source: string;
+                target: string;
+              }[])
+            : [],
+        },
+      ],
     };
   }
-  // 诊断工具的小时趋势取“每小时最严重 AP”，并非同一对象的时间曲线。
-  // P0 用完整诊断证据呈现，不把这种序列混入当前 UE 的趋势图。
-  return <section className="ain-tool-result">
-    <h2>对话工具返回</h2><p className="ain-analysis-note">{scopeLabel(result.scope)} · 工具：{result.intent}</p>
-    <p className="ain-analysis-observation">{result.reply}</p>
-    <p className="ain-analysis-note">工具范围独立于页面筛选。后端未返回意图解析使用模型还是规则，本页不作推断。</p>
-    {option && <ChartPanel title={title} description={result.chart?.type === "graph" ? "全工具时间段内出现过的服务连接；非同一时刻拓扑" : "后端 UE 采样网格均值；空白网格无数据"} option={option} height={340} />}
-    {result.diagnosis && <EvidencePanel title="对话范围故障研判" result={result.diagnosis} pending={false} error="" />}
-  </section>;
+
+  return (
+    <section
+      className="ain-tool-result ain-tool-result-v2"
+      id="ain-tool-result"
+      aria-labelledby="ain-tool-result-title"
+    >
+      <div className="ain-tool-heading">
+        <h2 id="ain-tool-result-title">工具返回图表</h2>
+        <span>
+          {title || result.chart.type || "未知图表"}
+        </span>
+      </div>
+
+      <p className="ain-tool-scope">
+        返回范围：{scopeLabel(result.scope)}
+      </p>
+
+      {option ? (
+        <ChartPanel
+          title={title}
+          description={description}
+          option={option}
+          height={result.chart.type === "line" ? 220 : 340}
+        />
+
+      ) : (
+        <p className="ain-tool-unsupported" role="status">
+          已收到图表数据，当前页面暂不支持展示此类型：
+          {result.chart.type}
+        </p>
+      )}
+    </section>
+  );
 }

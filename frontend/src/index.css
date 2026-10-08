@@ -1,29 +1,26 @@
-/* 全站统一的颜色 */
 :root {
   font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
-  color: #213c40;
-  background: #f1f7f6;
+  color: #183153;
+  background: #edf5fc;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  --color-background: #f1f7f6;
-  --color-panel: #ffffff;
-  --color-text: #213c40;
-  --color-muted: #617c7e;
-  --color-primary: #18766f;
-  --color-primary-light: #e5f1ed;
-  --color-border: #dce7e5;
-  --color-chart: #14182c;
+  --color-background: #edf5fc;
+  --color-panel: #fff;
+  --color-text: #183153;
+  --color-muted: #6d819a;
+  --color-primary: #008f9d;
+  --color-primary-light: #e5f6f8;
+  --color-border: #dbe7f3;
+  --color-chart: #141d30;
 }
 
-/* 元素尺寸包含内边距和边框 */
 * {
   box-sizing: border-box;
 }
 
-/* 去掉浏览器默认留白 */
 body {
   margin: 0;
   min-width: 320px;
@@ -35,7 +32,6 @@ body {
   min-height: 100vh;
 }
 
-/* 表单控件继承网站字体 */
 button,
 input,
 select,
@@ -55,8 +51,9 @@ button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
-a:focus-visible {
-  outline: 2px solid var(--color-primary);
+a:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #176dff;
   outline-offset: 3px;
 }
 
@@ -69,4 +66,16 @@ p {
 
 a {
   color: inherit;
+}
+
+/* 用户选择减少动态效果时，关闭持续动画 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

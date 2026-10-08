@@ -1,12 +1,12 @@
 import type { DashboardData, NetworkNode } from "../../types/backend";
-import SpatialChart, { createProjection, SceneAxes, SceneNode } from "./SpatialChart";
+import SpatialChart, { createProjection, SCENE_VIEWBOX, SceneAxes, SceneNode } from "./SpatialChart";
 
 const BANDS = [
-  { label: "< −105", color: "#536aab" },
-  { label: "−105～−95", color: "#648fc3" },
-  { label: "−95～−85", color: "#6bb9cf" },
-  { label: "−85～−75", color: "#72c9b6" },
-  { label: "≥ −75", color: "#ade1ba" },
+  { label: "< −105", color: "#67768a" },
+  { label: "−105～−95", color: "#2e69d2" },
+  { label: "−95～−85", color: "#36b7f3" },
+  { label: "−85～−75", color: "#27d7d2" },
+  { label: "≥ −75", color: "#58edc6" },
 ];
 function color(value: number) { return BANDS[value < -105 ? 0 : value < -95 ? 1 : value < -85 ? 2 : value < -75 ? 3 : 4].color; }
 export default function RadioMapChart({ data, ueId, focusedApId, onSelectUE, onFocusAP }: {
@@ -22,11 +22,11 @@ export default function RadioMapChart({ data, ueId, focusedApId, onSelectUE, onF
       <p>节点位置为范围内最新时刻；网格为整个时间段的均值。</p>
       <p>热力接口：{data.apMeans.length} 个网格均值点（{data.gridSize}m 网格），覆盖 X 20–480m / Y 20–430m。</p>
       <p>网格值为对应区域 UE 的 RSRP 均值，非 AP 发射功率。</p></>}
-  >{p && <svg className="ain-spatial-svg" viewBox="0 0 480 400" role="group" aria-label="UE 采样位置的 RSRP 网格图">
+  >{p && <svg className="ain-spatial-svg" viewBox={SCENE_VIEWBOX} role="group" aria-label="UE 采样位置的 RSRP 网格图">
     <SceneAxes area={data.area} projection={p} />
     {data.cells.map(c => <rect key={`${c.x},${c.y}`} x={p.x(c.x)} y={p.y(c.y + data.gridSize)}
       width={p.x(c.x + data.gridSize) - p.x(c.x)} height={p.y(c.y) - p.y(c.y + data.gridSize)}
-      fill={color(c.value)} opacity={0.8} stroke="#171d30" strokeWidth={0.35}>
+      fill={color(c.value)} opacity={0.92} stroke="#1c2c45" strokeWidth={0.35}>
       <title>{`X ${c.x}–${c.x + data.gridSize}m / Y ${c.y}–${c.y + data.gridSize}m：RSRP ${c.value.toFixed(1)} dBm；${c.count} 次采样`}</title>
     </rect>)}
     {data.nodes.map(node => <SceneNode key={node.id} node={node} projection={p}
