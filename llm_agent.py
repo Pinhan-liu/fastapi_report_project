@@ -67,6 +67,28 @@ def call_llm(message: str) -> str:
     return resp.json()["choices"][0]["message"]["content"]
 
 
+def call_llm_chat(system_prompt: str, user_message: str, temperature: float = 0.2) -> str:
+    """通用对话式 LLM 调用：自定义 system prompt，返回润色后的文本。
+    未配置 key / 超时 / 网络错误 / 非 2xx 一律抛异常，由上层降级到模板文案。"""
+    if not LLM_API_KEY:
+        raise RuntimeError("LLM_API_KEY 未配置")
+    resp = requests.post(
+        LLM_URL,
+        json={
+            "model": LLM_MODEL,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message},
+            ],
+            "temperature": temperature,
+        },
+        headers={"Authorization": f"Bearer {LLM_API_KEY}"},
+        timeout=45,
+    )
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"].strip()
+
+
 def parse_unified_response(text: str) -> dict | None:
     """升级3：容错 JSON 解析（cell-free parse_unified_response 借鉴）。
     处理三种脏输出：①前后带废话/注释；②中文冒号/逗号；③尾逗号。
