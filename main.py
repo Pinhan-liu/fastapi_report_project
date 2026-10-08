@@ -914,7 +914,7 @@ def api_get_realtime_data(last_time: str = None):
 class ForecastRequest(BaseModel):
     scenario: str = "校园"
     window_start: str = "2026-01-01 00:00:00"
-    window_end: str = "2026-01-03 23:59:59"
+    window_end: str = "2026-01-31 23:59:59"
 
 
 @app.post("/api/analyze/forecast", summary="区域信号/频谱态势预测（Prophet 时序模型）")
@@ -932,16 +932,26 @@ def analyze_forecast(req: ForecastRequest):
     if not rows:
         return success_response({
             "scenario": req.scenario, "window_start": req.window_start,
-            "window_end": req.window_end, "method": "prophet",
+            "window_end": req.window_end, "method": "no_data",
             "metrics": metrics, "ues": [], "series": {}
         })
 
     built = build_series(rows, metrics)
+    # 顶层 method 如实聚合：全部 prophet / 全部 moving_average / 混合 mixed / 均无法预测 none
+    methods = {s["method"] for ue in built["series"].values() for s in ue.values()}
+    if not methods or methods == {"none"}:
+        top_method = "moving_average"
+    elif methods == {"prophet"}:
+        top_method = "prophet"
+    elif methods == {"moving_average"}:
+        top_method = "moving_average"
+    else:
+        top_method = "mixed"
     return success_response({
         "scenario": req.scenario,
         "window_start": req.window_start,
         "window_end": req.window_end,
-        "method": "prophet",
+        "method": top_method,
         "bin_size_min": built["bin_size_min"],
         "metrics": built["metrics"],
         "ues": built["ues"],

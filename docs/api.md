@@ -14,7 +14,7 @@ Base URL: http://localhost:8000
 |5|GET|/api/data/heatmap|信号热力图数据|
 |6|GET|/api/network/topology/basic|基础网络拓扑数据|
 |7|GET|/api/data/realtime|实时增量监测数据|
-|8|GET|/api/predict/result|时序预测结果查询（契约v1·占位实现）|
+|8|GET|/api/predict/result|时序预测结果查询（契约v1·查询壳：转调接口10数据，不新建模型）|
 |9|GET|/api/network/topology/enhanced|拓扑增强数据（契约v1）|
 |10|POST|/api/analyze/forecast|区域信号/频谱态势预测（Prophet 时序模型）|
 
@@ -358,7 +358,7 @@ GET /api/data/realtime?last\_time=2026\-10\-06 00:00:00
 GET /api/predict/result?scenario=校园&start_time=2026-01-04 00:00:00&end_time=2026-01-04 23:59:59&target_type=ap&target_id=AP-01&metric=rsrp
 
 功能：根据时间范围、预测对象与指标，返回时序预测结果（预测值、置信区间与状态标注）。
-当前为契约 v1 + 占位实现阶段：后端返回固定空结构，不接入真实预测模型；模型（Prophet/LSTM）就绪后替换内部逻辑，字段契约不变。
+契约 v1 已冻结。当前实现为**查询壳**：保持 v1 字段结构不变，内部转调接口 10（/api/analyze/forecast）的 Prophet 预测数据做字段映射，不新建模型、不升级契约版本；降级语义与接口 10 一致（moving_average 时无置信区间，confidence_min/max 等于预测值）。
 
 ### 请求参数
 
@@ -470,13 +470,13 @@ GET /api/network/topology/enhanced?scenario=校园&time=2026-01-01 10:00:00
 
 错误码：复用全局错误码体系——参数缺失 40001、格式非法 40002、范围越界 40003、服务异常 50001。
 
-> 契约状态说明：接口 8、接口 9 契约 v1 已冻结，后续模型接入（Prophet/LSTM）与前端联调均以本契约为准；字段变更需走契约评审。
+> 契约状态说明：接口 8、接口 9 契约 v1 已冻结，前端联调均以本契约为准；接口 8 为查询壳（转调接口 10 数据、不新建模型），字段变更需走契约评审。
 
 ## 接口 10：区域信号/频谱态势预测（Prophet 时序模型）
 
 POST /api/analyze/forecast
 
-功能：对每个 UE × 指标（rsrp/sinr/throughput）做 1 小时桶聚合，前 80% 训练 Prophet 模型、后 20% 测试评估（输出 predicted 与 MAPE），并在测试段之后延伸 24 小时未来预测（含置信区间 lower/upper）。与接口 8（/api/predict/result，契约 v1 占位）的区别：本接口为**已接入真实 Prophet 模型的预测数据源**，接口 8 是前端预测结果查询契约的占位实现，模型就绪后可按契约替换。
+功能：对每个 UE × 指标（rsrp/sinr/throughput）做 1 小时桶聚合，前 80% 训练 Prophet 模型、后 20% 测试评估（输出 predicted 与 MAPE），并在测试段之后延伸 24 小时未来预测（含置信区间 lower/upper）。与接口 8（/api/predict/result，契约 v1）的区别：接口 10 为**已接入真实 Prophet 模型的预测数据源**；接口 8 为**查询壳**——保持 v1 契约不变，转调接口 10 的数据，不新建模型、不升契约版本。
 
 ### 请求
 
@@ -532,19 +532,20 @@ POST /api/analyze/forecast
 
 |字段|类型|说明|
 |---|---|---|
-|method|string|预测模型：prophet；Prophet 不可用时自动降级为 moving_average（接口不崩）|
+|method|string|本次请求实际采用的预测模型，如实返回：`prophet`（全部序列 Prophet 成功）/ `moving_average`（全部降级移动平均或全部序列无法预测）/ `mixed`（部分序列降级）；空数据时返回 `no_data`。series 内每个序列自带 method 字段，与顶层一致粒度|
 |bin_size_min|int|聚合桶粒度，固定 60（1 小时）|
 |metrics / ues|array|本次预测的指标与 UE 列表|
-|series[ue][metric]|object|单个 UE × 指标的预测结果|
+|series[ue][metric]|object|单个 UE × 指标的预测结果（含 method 字段：prophet / moving_average / none）|
 |bins / true|array|全量 1 小时桶实测序列（前端对比图横轴与实测线）|
 |predicted|array|测试段（后 20%）预测值，24 点，与真实值对比用|
 |true_mean / pred_mean / mape|number|测试段实测均值 / 预测均值 / 平均绝对百分比误差（%）|
 |forecast_bins / forecast|array|未来 24 小时预测的时间轴与预测值|
-|lower / upper|array|未来 24 小时置信区间下 / 上限（与 forecast 等长）|
+|lower / upper|array|未来 24 小时置信区间下 / 上限（与 forecast 等长）；**降级为 moving_average 时无置信区间，lower/upper 恒等于 forecast**，前端不应绘制置信带|
 
 ### 备注
 
-- 训练/测试切分固定 80/20；未来延伸固定 24 小时；序列不足 24 个点或 Prophet 拟合失败时自动降级 moving_average
+- 训练/测试切分固定 80/20；未来延伸固定 24 小时；序列不足 24 个点或 Prophet 拟合失败时自动降级 moving_average（降级时 method 如实返回 moving_average，lower/upper=forecast 无置信区间）
+- 请求默认窗口为 **30 天全窗**（2026-01-01 00:00:00 ~ 2026-01-31 23:59:59），可直接观察到第 4 天起的故障预测；不传 window_start/window_end 时走默认窗口
 - 数据源为 30 天仿真数据（`data/network_data_30d(1).csv`，main.py 默认读取；3d 版备份为 `data/network_data_3d_bak.csv`）
 - 30d 数据第 4 天起每 2 天注入一组故障，anomaly 演示窗口请选择 1 月 4 日之后以观察到异常样本
 - 错误码：复用全局错误码体系——参数缺失 40001、格式非法 40002、范围越界 40003、服务异常 50001

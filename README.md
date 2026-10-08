@@ -80,7 +80,7 @@ python -m uvicorn main:app --reload --host 0.0.0.0
 
 > 接口 1/2/3 已接入唐苗仿真数据集（`data/network_data.csv`，12960 条、18 列，多日时间跨度 + AP/UE 坐标 + 故障注入），返回真实查询与多KPI研判结果；接口 4 报告生成为占位，第 3 周接入。
 >
-> 时序预测（接口 5）开发中：多日数据已就绪，接入 Prophet / LSTM 后可支撑"历史 → 未来"的预测演示。
+> 时序预测（接口 10）已接入 Prophet：30d 数据支撑"历史 → 未来"预测演示（含置信区间，降级 moving_average 兜底）。
 
 ### 前端（联调中）
 
@@ -98,9 +98,9 @@ npm run dev
 | 2    | POST | /api/analyze/anomaly  | 多 KPI 联合故障研判                                          |
 | 3    | POST | /api/agent/chat       | 自然语言对话                                                 |
 | 4    | POST | /api/export/report    | 导出分析报告                                                 |
-| 5    | POST | /api/analyze/forecast | 真实 vs 预测对比：移动平均 baseline（10 分钟桶 · 前 60% 训练 / 后 40% 测试 · 输出 True / Predicted / MAPE）；Prophet / LSTM 待接入 |
+| 10   | POST | /api/analyze/forecast | 区域信号/频谱态势预测：1 小时桶 · 前 80% 训练 Prophet / 后 20% 测试 · 输出 True / Predicted / MAPE + 未来 24h 预测（lower/upper 置信区间）；Prophet 失败自动降级移动平均（method 如实返回） |
 | 6    | GET  | /api/network/topology/basic | 网络拓扑：AP / UE 位置与连接关系（已带坐标） |
-| 8    | GET  | /api/predict/result | 时序预测结果查询（契约 v1 · 占位实现，待 Prophet/LSTM 接入） |
+| 8    | GET  | /api/predict/result | 时序预测结果查询（契约 v1 · 查询壳：转调接口 10 数据，不新建模型） |
 | 9    | GET  | /api/network/topology/enhanced | 拓扑增强数据（契约 v1：AP/UE 属性 + 链路多指标 + 整体统计） |
 
 详细请求 / 响应格式见 [docs/api.md](docs/api.md)。
@@ -114,7 +114,7 @@ npm run dev
 * 请求参数：`scenario`（必填）、`start_time` / `end_time`（必填，yyyy-MM-dd HH:mm:ss）、`target_type`（ap/ue，必填）、`target_id`（可选）、`metric`（rsrp/sinr/throughput，必填）、`interval`（可选，默认 15min）
 * 返回字段：`predict_list[]` 每项含 `time` / `position` / `predict_value` / `confidence_min` / `confidence_max` / `status`；另含 `model`（placeholder → prophet/lstm）与 `total`
 * 状态标注：`normal`（正常）/ `warning`（预警）/ `abnormal`（异常）
-* 当前状态：**占位实现**——返回空 `predict_list`、`model="placeholder"`，字段契约保持稳定，前端可先行联调；Prophet / LSTM 模型就绪后替换内部逻辑
+* 当前状态：**查询壳**——契约 v1 字段保持稳定，内部转调接口 10（/api/analyze/forecast）的 Prophet 预测数据并映射字段，不新建模型；前端可先行联调
 
 #### 接口 9：拓扑增强数据（GET /api/network/topology/enhanced）
 
@@ -149,7 +149,7 @@ npm run dev
 
 ```
 AI-NetTune/
-├── main.py          # 后端主程序（FastAPI，接口 1-4 已实现 + 接口 5 时序预测开发中）
+├── main.py          # 后端主程序（FastAPI，P0 接口 + 接口 10 时序预测已接入）
 ├── data_generator.py # 仿真数据生成器（v2.3：多日 + 坐标 + 故障注入 + SINR 限幅）
 ├── data/
 │   ├── network_data.csv # 唐苗仿真数据集（3 天，12960 条，18 列，坐标 + 故障注入）
@@ -186,7 +186,7 @@ AI-NetTune/
 | 层级 | 内容                                                         |
 | ---- | ------------------------------------------------------------ |
 | P0   | 基础功能闭环（数据 / KPI 查询 / 研判 / LLM 意图 / 对话链路 / 基础 UI）——预测不阻塞，不加 |
-| P1   | 接口 5 返回 `past_frames` + `future_frames` 帧序列；前端**静态并排**展示"过去 7 帧 → 未来 3 帧"序列态势图 + MAE / RMSE 指标；**拓扑图 UE 点选联动真实 vs 预测对比**；预测模型采用**机器学习（Prophet / LSTM）**，移动平均仅作链路打通 baseline（与申报书"机器学习模型"口径一致） |
+| P1   | 接口 10 返回 `past_frames` + `future_frames` 帧序列；前端**静态并排**展示"过去 7 帧 → 未来 3 帧"序列态势图 + MAE / RMSE 指标；**拓扑图 UE 点选联动真实 vs 预测对比**；预测模型采用**机器学习（Prophet / LSTM）**，移动平均仅作链路打通 baseline（与申报书"机器学习模型"口径一致） |
 | P2   | 帧间**播放动画**、渐进过渡、地图缩放交互、指标面板美化（P0 未完成前不碰 P2） |
 
 ## 团队成员

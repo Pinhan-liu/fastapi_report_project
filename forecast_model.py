@@ -88,6 +88,7 @@ def _ma_fallback(vals: list[float], horizon: int) -> dict:
     true_c = sum(test) / len(test)
     mape = abs(true_c - pred_c) / max(abs(true_c), 1e-6) * 100
     return {
+        "method": "moving_average",
         "true_mean": round(true_c, 2),
         "pred_mean": round(pred_c, 2),
         "mape": round(min(mape, 999.0), 2),
@@ -133,6 +134,7 @@ def prophet_series(bins: list[str], vals: list[float], horizon: int) -> dict:
         mape = abs(true_mean - pred_mean) / denom * 100
 
         return {
+            "method": "prophet",
             "true_mean": round(true_mean, 2),
             "pred_mean": round(pred_mean, 2),
             "mape": round(min(mape, 999.0), 2),
@@ -160,7 +162,7 @@ def build_series(rows: list[dict], metrics: list[str] | None = None,
         for m, (bins, vals) in by_metric.items():
             r = prophet_series(bins, vals, horizon)
             if r is None:
-                series[ue][m] = {"true_mean": None, "pred_mean": None, "mape": None,
+                series[ue][m] = {"method": "none", "true_mean": None, "pred_mean": None, "mape": None,
                                  "bins": [], "true": [], "predicted": [],
                                  "forecast_bins": [], "forecast": [], "lower": [], "upper": []}
                 continue
