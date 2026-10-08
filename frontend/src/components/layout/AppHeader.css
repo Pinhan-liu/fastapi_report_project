@@ -1,133 +1,189 @@
+/* 第一批：保持原导航和路由，仅收紧尺寸、统一字体与品牌排列。 */
 .ain-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  min-height: 78px;
-  padding: 16px 28px;
-  background: #fff;
-  border-bottom: 1px solid #e2e9eb;
-  box-shadow: 0 1px 0 rgba(23, 29, 48, 0.03), 0 6px 18px rgba(23, 29, 48, 0.04);
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: rgb(250 253 255 / 96%);
+  border-bottom: 1px solid #d3e7fb;
+  box-shadow: 0 2px 10px rgb(31 89 151 / 4%);
 }
 
-.ain-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: #213d45;
-  text-decoration: none;
-  flex-shrink: 0;
-}
-
-.ain-brand-icon {
+.ain-header-inner {
+  width: 100%;
+  max-width: 1440px;
+  min-height: 54px;
+  margin: 0 auto;
+  padding: 8px 24px;
   display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  background: #187c79;
-  color: #fff;
-  font-size: 15px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 24px;
 }
 
-.ain-brand strong {
-  display: block;
-  font-size: 23px;
-  line-height: 1.2;
-  letter-spacing: -0.5px;
-}
-
-.ain-brand small {
-  display: block;
-  margin-top: 5px;
-  font-size: 9px;
-  letter-spacing: 1.6px;
-  color: #72848c;
-}
-
-.ain-nav {
+.ain-header .ain-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 8px;
+  justify-self: start;
+  min-width: 0;
+  color: #102c65;
+  text-decoration: none;
 }
 
-.ain-nav a,
-.ain-nav-pending {
-  padding: 9px 13px;
-  border-radius: 9px;
-  font-size: 14px;
+.ain-header .ain-brand-icon {
+  width: 29px;
+  height: 29px;
+  flex-shrink: 0;
+  color: #1685ff;
+}
+
+.ain-header .ain-brand > span {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.ain-header .ain-brand strong {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -.5px;
+  white-space: nowrap;
+}
+
+.ain-header .ain-brand small {
+  padding-left: 14px;
+  border-left: 1px solid #c7ddf5;
+  color: #183d74;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.ain-header .ain-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: center;
+  gap: 5px;
+}
+
+.ain-header .ain-nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 14px;
+  border-radius: 5px;
+  color: #45638c;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
   white-space: nowrap;
   text-decoration: none;
+  transition: color .18s, background-color .18s;
 }
 
-.ain-nav a {
-  color: #5c737c;
+.ain-header .ain-nav a:hover {
+  color: #176dff;
+  background: #f0f7ff;
 }
 
-.ain-nav a:hover {
-  background: #f1f7f6;
-  color: #187c79;
+.ain-header .ain-nav a.active {
+  color: #176dff;
+  background: #e5f2ff;
+  font-weight: 700;
 }
 
-.ain-nav a.active {
-  color: #187c79;
-  background: #e7f2ef;
+.ain-header .ain-nav a.active::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  width: 26px;
+  height: 2px;
+  border-radius: 2px;
+  background: #1685ff;
+  transform: translateX(-50%);
 }
 
-.ain-nav-pending {
-  color: #9daeb4;
-  cursor: not-allowed;
-}
-
-.ain-header-status {
-  display: flex;
+.ain-header .ain-header-status {
+  display: inline-flex;
   align-items: center;
-  gap: 7px;
-  color: #6e838c;
-  font-size: 12px;
+  justify-self: end;
+  gap: 6px;
+  color: #607da3;
+  font-size: 11px;
+  line-height: 1.5;
   white-space: nowrap;
 }
 
 .ain-header-status i {
-  width: 7px;
-  height: 7px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: #187c79;
+  background: #1685ff;
+}
+
+@media (max-width: 1200px) {
+  .ain-header-inner {
+    gap: 16px;
+  }
+  .ain-header .ain-brand > span {
+    display: block;
+  }
+  .ain-header .ain-brand small {
+    display: block;
+    margin-top: 2px;
+    padding-left: 0;
+    border-left: 0;
+    font-size: 11px;
+    font-weight: 500;
+  }
 }
 
 @media (max-width: 1000px) {
-  .ain-header {
-    flex-wrap: wrap;
-    gap: 15px;
+  .ain-header-inner {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 16px;
   }
-
-  .ain-nav {
-    order: 3;
-    width: 100%;
+  .ain-header .ain-header-status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+  .ain-header .ain-nav {
+    justify-self: end;
+  }
+  .ain-header .ain-nav a {
+    padding: 7px 10px;
   }
 }
 
-@media (max-width: 600px) {
-  .ain-header {
-    padding: 15px 18px;
+@media (max-width: 700px) {
+  .ain-header-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    padding: 8px 12px;
   }
-
-  .ain-brand strong {
+  .ain-header .ain-brand strong {
     font-size: 20px;
   }
-
-  .ain-header-status {
-    font-size: 11px;
+  .ain-header .ain-nav {
+    width: 100%;
+    justify-self: stretch;
+    gap: 4px;
   }
-
-  .ain-nav {
-    gap: 3px;
+  .ain-header .ain-nav a {
+    flex: 1;
+    padding: 7px 4px;
+    font-size: 12px;
   }
+}
 
-  .ain-nav a,
-  .ain-nav-pending {
-    padding: 8px 9px;
-    font-size: 13px;
+@media print {
+  .ain-header {
+    position: static;
   }
 }

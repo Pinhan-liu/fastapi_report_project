@@ -1,48 +1,215 @@
 import type { EChartsOption } from "echarts";
-import type { ForecastResult, ForecastMetric } from "../../types/backend";
-import ChartPanel, { AXIS_STYLE, CHART_BACKGROUND } from "./ChartPanel";
+import type {
+  ForecastResult,
+  ForecastMetric,
+} from "../../types/backend";
+import ChartPanel, {
+  AXIS_STYLE,
+  CHART_BACKGROUND,
+  CHART_FONT,
+} from "./ChartPanel";
 import "./ForecastCompareChart.css";
 
-// 与论文 Fig 对齐的映射：Signal Power→RSRP、Interference→SINR、Rate→吞吐量
-const METRICS: { key: ForecastMetric; label: string; unit: string }[] = [
-  { key: "rsrp", label: "信号强度 Signal Power", unit: "dBm" },
-  { key: "sinr", label: "干扰相关 SINR", unit: "dB" },
-  { key: "throughput", label: "可达吞吐量 Rate", unit: "Mbps" },
+const METRICS: {
+  key: ForecastMetric;
+  label: string;
+  unit: string;
+}[] = [
+  { key: "rsrp", label: "RSRP · 信号强度", unit: "dBm" },
+  { key: "sinr", label: "SINR · 信号质量", unit: "dB" },
+  { key: "throughput", label: "吞吐量", unit: "Mbps" },
 ];
 
-export default function ForecastCompareChart({ forecast, pending, error }: {
-  forecast: ForecastResult | null; pending: boolean; error: string;
+function finiteValue(value: number | null | undefined) {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : null;
+}
+
+export default function ForecastCompareChart({
+  forecast,
+  pending,
+  error,
+}: {
+  forecast: ForecastResult | null;
+  pending: boolean;
+  error: string;
 }) {
-  if (pending) return <p className="ain-load-state">正在生成 真实 vs 预测 对比…</p>;
-  if (error) return <div className="ain-error" role="alert"><p>{error}</p></div>;
-  if (!forecast) return null;
-  const ues = forecast.ues;
-  if (!ues.length) return <div className="ain-load-state"><p>所选范围暂无预测数据</p></div>;
-  return <section className="ain-forecast-section">
-    <div className="ain-section-heading"><h2>信号质量预测对比（真实 vs 预测）</h2>
-      <p>{forecast.method} · {forecast.bin_size_min} 分钟桶 · 前 60% 训练 / 后 40% 测试 · 场景「{forecast.scenario}」</p>
-    </div>
-    <div className="ain-forecast-grid">
-      {METRICS.map(m => {
-        const trueData = ues.map(ue => forecast.series[ue]?.[m.key]?.true_mean ?? null);
-        const predData = ues.map(ue => forecast.series[ue]?.[m.key]?.pred_mean ?? null);
-        const mapeValues = ues.map(ue => forecast.series[ue]?.[m.key]?.mape).filter((v): v is number => v != null);
-        const avgMape = mapeValues.length ? (mapeValues.reduce((a, b) => a + b, 0) / mapeValues.length).toFixed(1) : "—";
-        const option: EChartsOption = {
-          animation: false, backgroundColor: CHART_BACKGROUND,
-          tooltip: { trigger: "axis", valueFormatter: (v: unknown) => String(v) },
-          legend: { data: ["实测 True", "预测 Predicted"], textStyle: { color: "#b5c7d5" }, top: 4 },
-          grid: { left: 70, right: 18, top: 44, bottom: 30 },
-          xAxis: { type: "category", data: ues, ...AXIS_STYLE },
-          yAxis: { type: "value", name: m.unit, nameTextStyle: { color: "#b5c7d5", fontSize: 11 }, ...AXIS_STYLE },
-          series: [
-            { name: "实测 True", type: "bar", barWidth: 16, itemStyle: { color: "#f39c12" }, data: trueData },
-            { name: "预测 Predicted", type: "bar", barWidth: 16, itemStyle: { color: "#3498db" }, data: predData },
-          ],
-        };
-        return <ChartPanel key={m.key} title={m.label}
-          description={`测试段均值对比 · MAPE 平均 ${avgMape}%`} option={option} height={215} />;
-      })}
-    </div>
-  </section>;
+  if (!forecast && !pending && !error) return null;
+  
+const hasValidForecast = Boolean(
+  forecast?.ues.some((ue) =>
+    METRICS.some((metric) => {
+      const item = forecast.series[ue]?.[metric.key];
+
+      return (
+        finiteValue(item?.true_mean) !== null &&
+        finiteValue(item?.pred_mean) !== null
+      );
+    })
+  )
+);
+
+  return (
+    <section
+      className="ain-forecast-section"
+      id="ain-forecast-result"
+      aria-labelledby="ain-forecast-title"
+    >
+      <div className="ain-forecast-heading">
+        <div>
+          <h2 id="ain-forecast-title">历史预测效果对比</h2>
+          <span className="ain-forecast-badge">历史回测</span>
+        </div>
+
+        <div
+          className="ain-forecast-legend"
+          aria-label="图表图例"
+        >
+          <span>
+            <i className="is-true" />
+            实测
+          </span>
+          <span>
+            <i className="is-predicted" />
+            预测
+          </span>
+        </div>
+      </div>
+
+      {pending ? (
+        <p className="ain-forecast-state" role="status">
+          正在获取预测对比数据…
+        </p>
+      ) : error ? (
+        <p className="ain-forecast-error" role="alert">
+          {error}
+        </p>
+      ) : (
+        forecast && (
+          <>          
+           {!forecast.ues.length || !hasValidForecast ? (
+             <p className="ain-forecast-state" role="status">
+               当前时间范围的历史样本不足，无法生成有效的预测对比结果。
+               建议选择1至2天的历史数据后重新加载。
+             </p>
+           ) : (
+
+              <div className="ain-forecast-grid">
+                {METRICS.map((metric) => {
+                  const trueData = forecast.ues.map((ue) =>
+                    finiteValue(
+                      forecast.series[ue]?.[metric.key]?.true_mean,
+                    ),
+                  );
+
+                  const predData = forecast.ues.map((ue) =>
+                    finiteValue(
+                      forecast.series[ue]?.[metric.key]?.pred_mean,
+                    ),
+                  );
+
+                  const errors = forecast.ues
+                    .map((ue) =>
+                      finiteValue(
+                        forecast.series[ue]?.[metric.key]?.mape,
+                      ),
+                    )
+                    .filter(
+                      (value): value is number => value !== null,
+                    );
+
+                  const average = errors.length
+                    ? errors.reduce(
+                        (sum, value) =>
+                          sum + value / errors.length,
+                        0,
+                      )
+                    : null;
+
+                  const description =
+                    average !== null && Number.isFinite(average)
+                      ? `UE 均值对比 · 平均 MAPE ${average.toFixed(1)}%`
+                      : "UE 均值对比 · 误差未返回";
+
+                  const option: EChartsOption = {
+                    animation: false,
+                    backgroundColor: CHART_BACKGROUND,
+                    textStyle: { fontFamily: CHART_FONT },
+                    tooltip: {
+                      trigger: "axis",
+                      renderMode: "richText",
+                      valueFormatter: (value: unknown) =>
+                        `${value} ${metric.unit}`,
+                    },
+                    grid: {
+                      left: 12,
+                      right: 16,
+                      top: 27,
+                      bottom: 8,
+                      containLabel: true,
+                    },
+                    xAxis: {
+                      type: "category",
+                      data: forecast.ues,
+                      ...AXIS_STYLE,
+                    },
+                    yAxis: {
+                      type: "value",
+                      name: metric.unit,
+                      nameTextStyle: {
+                        color: "#c3d5ee",
+                        fontSize: 11,
+                        fontFamily: CHART_FONT,
+                      },
+                      ...AXIS_STYLE,
+                    },
+                    series: [
+                      {
+                        name: "实测",
+                        type: "bar",
+                        barMaxWidth: 22,
+                        itemStyle: { color: "#ffb32c", borderRadius: 2 },
+                        data: trueData,
+                      },
+                      {
+                        name: "预测",
+                        type: "bar",
+                        barMaxWidth: 22,
+                        itemStyle: { color: "#1685ff", borderRadius: 2 },
+                        data: predData,
+                      },
+                    ],
+                  };
+
+                  return (
+                    <ChartPanel
+                      key={metric.key}
+                      title={metric.label}
+                      description={description}
+                      option={option}
+                      height={135}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            <details className="ain-forecast-method">
+              <summary>方法与数据范围</summary>
+              <p>
+                方法：{forecast.method} · 时间桶：
+                {forecast.bin_size_min} 分钟
+              </p>
+              <p>
+                场景：{forecast.scenario} ·{" "}
+                {forecast.window_start} 至 {forecast.window_end}
+                （北京时间）
+              </p>
+            </details>
+          </>
+        )
+      )}
+    </section>
+  );
 }

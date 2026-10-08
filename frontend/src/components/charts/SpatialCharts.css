@@ -5,7 +5,7 @@
 
 .ain-spatial-stage {
   display: block;
-  background: #141a29;
+  background: linear-gradient(135deg, #102036, #15243b);
   overflow: hidden;
 }
 
@@ -23,13 +23,13 @@
 }
 
 .ain-scene-axes line {
-  stroke: #2a3449;
+  stroke: #293b55;
   stroke-width: 1;
 }
 
 .ain-scene-axes text {
-  fill: #b5c7d5;
-  font-size: 12px;
+  fill: #c3d5ee;
+  font-size: 15px;
 }
 
 .ain-scene-node {
@@ -38,10 +38,10 @@
 }
 
 .ain-scene-node text {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 600;
   paint-order: stroke;
-  stroke: #141a29;
+  stroke: #102036;
   stroke-width: 3px;
   pointer-events: none;
 }
@@ -55,28 +55,28 @@
   fill: #c9dce6;
   font-size: 13px;
   paint-order: stroke;
-  stroke: #141a29;
+  stroke: #102036;
   stroke-width: 3px;
   pointer-events: none;
 }
 
 .ain-topology-link {
-  stroke: #587084;
-  stroke-width: 2;
-  opacity: 0.45;
+  stroke: #5c7a9f;
+  stroke-width: 1.5;
+  opacity: 0.6;
 }
 
 .ain-topology-link.is-active {
-  stroke: #efab65;
-  stroke-width: 3;
+  stroke: #1685ff;
+  stroke-width: 2.5;
   opacity: 1;
 }
 
 .ain-topology-weight {
-  fill: #9db4c4;
-  font-size: 11px;
+  fill: #bbd4f5;
+  font-size: 14px;
   paint-order: stroke;
-  stroke: #141a29;
+  stroke: #102036;
   stroke-width: 3px;
   pointer-events: none;
 }
@@ -133,23 +133,23 @@
   height: 9px;
 }
 
-.ain-key-ap {
+.ain-spatial-key .ain-key-ap {
   width: 0;
   height: 0;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-bottom: 9px solid #e74c3c;
+  border-bottom: 9px solid #ff5657;
   background: none;
 }
 
 .ain-key-ue {
-  background: #2ecc71;
+  background: #22dfb6;
   border: none;
   border-radius: 50%;
 }
 
 .ain-key-selected {
-  border: 2px solid #efab65;
+  border: 2px solid #ffbb4a;
   border-radius: 50%;
 }
 

@@ -1,19 +1,50 @@
 import type {
-  QueryScope, MetricRecord, DashboardData, Diagnosis, Candidate, ChatResult, HeatCell, NetworkNode,
+  QueryScope,
+  MetricRecord,
+  DashboardData,
+  Diagnosis,
+  Candidate,
+  ChatResult,
+  HeatCell,
+  NetworkNode,
+  ForecastResult,
+  ForecastMetric,
 } from "../types/backend";
 
 type Obj = Record<string, unknown>;
 type Fetcher = typeof fetch;
 const DAY = 86400_000;
 const MAX_ROWS = 1000;
-export const DEFAULT_SCOPE: QueryScope = {
-  scenario: "校园", start: "2026-01-01 10:00:00", end: "2026-01-01 11:59:59",
+
+export const DATASET_BOUNDS = {
+  min: "2026-01-01T00:00:00",
+  max: "2026-01-30T23:59:59",
 };
+
+export const DEFAULT_SCOPE: QueryScope = {
+  scenario: "校园",
+  start: "2026-01-01 10:00:00",
+  end: "2026-01-01 11:59:59",
+};
+
 export const CASE_WINDOWS = [
-  { label: "覆盖案例", start: "2026-01-01 10:00:00", end: "2026-01-01 11:59:59" },
-  { label: "拥塞案例", start: "2026-01-01 20:00:00", end: "2026-01-01 21:59:59" },
-  { label: "边缘案例", start: "2026-01-01 00:00:00", end: "2026-01-01 23:59:59" },
+  {
+    label: "覆盖案例",
+    start: "2026-01-01 10:00:00",
+    end: "2026-01-01 11:59:59",
+  },
+  {
+    label: "拥塞案例",
+    start: "2026-01-01 20:00:00",
+    end: "2026-01-01 21:59:59",
+  },
+  {
+    label: "边缘案例",
+    start: "2026-01-20 01:00:00",
+    end: "2026-01-20 02:59:59",
+  },
 ];
+
 const obj = (v: unknown): Obj => {
   if (!v || typeof v !== "object" || Array.isArray(v)) throw new Error("接口数据结构不正确");
   return v as Obj;
@@ -131,11 +162,44 @@ export async function loadDashboard(scope: QueryScope, signal?: AbortSignal, fet
     request(`/data/heatmap?${heatParams}`, signal, undefined, fetcher),
   ]);
   if (topology.timestamp !== latest.backendTime || !Array.isArray(topology.nodes) || !Array.isArray(topology.links)) throw new Error("拓扑时刻或返回结构与当前采样不一致");
-  const nodes = topology.nodes.map((v): NetworkNode => {
-    const n = obj(v), type = n.type;
-    if (type !== "ap" && type !== "ue") throw new Error("拓扑节点类型无效");
-    return { id: requiredString(n.id, "node.id"), type, x: coordinate(n.x), y: coordinate(n.y) };
-  });
+  
+    // 1. 获取当前查询窗口内每个 UE 的最新位置
+  const latestUePosition = new Map<
+    string,
+    { x: number; y: number }
+   >();
+
+    // metrics 已按时间升序排列
+   for (const r of metrics) {
+     latestUePosition.set(r.ueId, {
+       x: r.x,
+       y: r.y,
+     });
+   }
+
+    // 2. 构建拓扑节点
+   const nodes = topology.nodes.map((v): NetworkNode => {
+     const n = obj(v);
+     const type = n.type;
+
+     if (type !== "ap" && type !== "ue") {
+       throw new Error("拓扑节点类型无效");
+     }
+
+     const id = requiredString(n.id, "node.id");
+
+      // UE 使用最新采样坐标，AP 保留后端坐标
+     const position =
+       type === "ue" ? latestUePosition.get(id) : undefined;
+
+     return {
+       id,
+       type,
+       x: position?.x ?? coordinate(n.x),
+       y: position?.y ?? coordinate(n.y),
+     };
+   });
+
   const links = topology.links.map(v => {
     const l = obj(v), source = requiredString(l.source, "link.source"), target = requiredString(l.target, "link.target");
     return { id: `${source}->${target}`, source, target, rsrp: numeric(l.rsrp), sinr: numeric(l.sinr), throughput: numeric(l.throughput) };
@@ -194,9 +258,9 @@ export async function chatNetwork(message: string, scenario: string, window?: Qu
   const ref = data.query_ref ? obj(data.query_ref) : {};
   // 工具返回的实际窗口（后端透传），未提供时用传入窗口或默认三天
   const scope = {
-    scenario: str(ref.scenario) || scenario,
-    start: str(ref.start_time) || window?.start || "2026-01-01 00:00:00",
-    end: str(ref.end_time) || window?.end || "2026-01-03 23:59:59",
+    scenario: str(ref.scenario) || scenario,  
+    start: str(ref.start_time) || window?.start || DEFAULT_SCOPE.start,
+    end: str(ref.end_time) || window?.end || DEFAULT_SCOPE.end,
   };
   validateScope(scope);
   const intent = str(data.intent), rawChart = data.chart ? obj(data.chart) : null;

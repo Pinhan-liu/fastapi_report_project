@@ -2,7 +2,7 @@ import type { EChartsOption } from "echarts";
 import type { DashboardData, MetricKey } from "../../types/backend";
 import { METRIC_META } from "../../types/backend";
 import { getLatestFrame } from "../../services/metrics";
-import ChartPanel, { AXIS_STYLE, CHART_BACKGROUND } from "./ChartPanel";
+import ChartPanel, { LIGHT_AXIS_STYLE, CHART_FONT } from "./ChartPanel";
 
 const ITEMS: { key: MetricKey; title: string; className: string }[] = [
   {
@@ -30,8 +30,9 @@ export default function MetricCharts({
         const unit = METRIC_META[key].unit;
         const option: EChartsOption = {
           animation: false,
-          backgroundColor: CHART_BACKGROUND,
-          grid: { left: 34, right: 12, top: 19, bottom: 22 },
+          backgroundColor: "#ffffff",
+          textStyle: { fontFamily: CHART_FONT },
+          grid: { left: 10, right: 14, top: 25, bottom: 8, containLabel: true },
           tooltip: {
             trigger: "item",
             renderMode: "richText",
@@ -41,22 +42,24 @@ export default function MetricCharts({
                 : `${Number(value).toFixed(1)} ${unit}`,
           },
           xAxis: {
-            ...AXIS_STYLE,
+            ...LIGHT_AXIS_STYLE,
             type: "category",
             data: ues.map((ue) => ue.id),
-            axisLabel: { ...AXIS_STYLE.axisLabel, interval: 0 },
+            axisLabel: { ...LIGHT_AXIS_STYLE.axisLabel, interval: 0 },
           },
-          yAxis: { ...AXIS_STYLE, type: "value", min: 0, splitNumber: 2 },
+          yAxis: { ...LIGHT_AXIS_STYLE, type: "value", min: 0, splitNumber: 2 },
           series: [
             {
               name: title,
               type: "bar",
-              barMaxWidth: 23,
+              barMaxWidth: 46,
               label: {
                 show: true,
                 position: "top",
-                color: "#c4d5df",
-                fontSize: 9,
+                color: "#102c65",
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: CHART_FONT,
               },
               data: ues.map((ue) => {
                 const record = frame.metrics.find(
@@ -66,8 +69,8 @@ export default function MetricCharts({
                   name: ue.id,
                   value: record && Number.isFinite(record[key]) ? Number(record[key].toFixed(1)) : null,
                   itemStyle: {
-                    color: ue.id === ueId ? "#efab65" : "#71a7c7",
-                    borderRadius: [2, 2, 0, 0],
+                    color: ue.id === ueId ? "#ffb32c" : "#1685ff",
+                    borderRadius: [3, 3, 0, 0],
                   },
                 };
               }),
@@ -80,7 +83,7 @@ export default function MetricCharts({
             title={title}
             description={`${unit} · 同时刻比较 / 橙色为当前对象`}
             option={option}
-            height={90}
+            height={110}
             className={className}
             onSelect={onSelect}
           />

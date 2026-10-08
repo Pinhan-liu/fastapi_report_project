@@ -81,9 +81,18 @@ export default function ChartPanel({
     </figure>
   );
 }
+// 第二批：统一图表字体，分别提供深色画布与白底画布的轴样式。
+export const CHART_FONT = '"Microsoft YaHei", "PingFang SC", Arial, sans-serif';
 export const AXIS_STYLE = {
-  axisLine: { lineStyle: { color: "#526479" } },
-  axisLabel: { color: "#b5c7d5", fontSize: 10 },
-  splitLine: { lineStyle: { color: "#2a3449" } },
+  axisLine: { lineStyle: { color: "#4b6383" } },
+  axisTick: { show: false },
+  axisLabel: { color: "#c3d5ee", fontSize: 11, fontFamily: CHART_FONT },
+  splitLine: { lineStyle: { color: "#293b55", width: 1 } },
 };
-export const CHART_BACKGROUND = "#171d30";
+export const LIGHT_AXIS_STYLE = {
+  axisLine: { lineStyle: { color: "#bfd4ed" } },
+  axisTick: { show: false },
+  axisLabel: { color: "#47658e", fontSize: 11, fontFamily: CHART_FONT },
+  splitLine: { lineStyle: { color: "#e8f0fa", width: 1 } },
+};
+export const CHART_BACKGROUND = "#102036";

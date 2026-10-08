@@ -1,6 +1,7 @@
 import type { DashboardData, NetworkNode } from "../../types/backend";
 import SpatialChart, {
   createProjection,
+  SCENE_VIEWBOX,
   SceneAxes,
   SceneNode,
 } from "./SpatialChart";
@@ -78,7 +79,7 @@ export default function TopologyChart({
       {projection ? (
         <svg
           className="ain-spatial-svg"
-          viewBox="0 0 480 400"
+          viewBox={SCENE_VIEWBOX}
           role="group"
           aria-label="AP 与 UE 服务连接拓扑图"
         >
