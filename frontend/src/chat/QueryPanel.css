@@ -1,0 +1,388 @@
+.ain-workbench .ain-ai-v2 {
+  padding: 18px 20px;
+  margin-bottom: 18px;
+  border: 1px solid #cfe1f6;
+  border-top: 3px solid #3b89ec;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 7px 24px #2e63ab12;
+  min-width: 0;
+}
+
+.ain-ai-v2 .ain-ai-heading,
+.ain-ai-v2 .ain-ai-heading > div {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ain-ai-v2 .ain-ai-heading {
+  justify-content: space-between;
+  gap: 10px 18px;
+  margin-bottom: 14px;
+}
+
+.ain-ai-v2 .ain-ai-heading h2 {
+  margin: 0;
+  color: #193e70;
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.ain-ai-v2 .ain-ai-symbol {
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #387fee, #19b2c1);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ain-ai-v2 .ain-ai-badge {
+  color: #2976bd;
+  background: #ecf6ff;
+  border-radius: 5px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.ain-ai-v2 .ain-ai-scope {
+  color: #75879d;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.ain-ai-v2 .ain-ai-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.ain-ai-v2 .ain-query-form,
+.ain-ai-v2 .ain-ai-answer-column {
+  min-width: 0;
+}
+
+.ain-ai-v2 .ain-input-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #45617f;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ain-ai-v2 .ain-query-form textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 112px;
+  resize: vertical;
+  padding: 12px 14px;
+  border: 1px solid #d5e3f3;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #25476d;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.ain-ai-v2 .ain-query-form textarea::placeholder {
+  color: #8091a6;
+}
+
+.ain-ai-v2 .ain-query-form textarea:focus-visible {
+  outline: 2px solid #3886ed;
+  outline-offset: 2px;
+}
+
+.ain-ai-v2 .ain-query-form textarea:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.ain-ai-v2 .ain-query-input-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: #7a8ba0;
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.ain-ai-v2 .ain-query-send-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.ain-ai-v2 .ain-query-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ain-ai-v2 .ain-query-shortcuts .ain-button {
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.ain-ai-v2 .ain-query-send-row > .ain-button {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.ain-ai-v2 .ain-ai-answer-column {
+  padding: 14px 16px;
+  border: 1px solid #dce9f8;
+  border-radius: 11px;
+  background: #f5f9ff;
+}
+
+.ain-ai-v2 .ain-ai-answer-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ain-ai-v2 .ain-ai-answer-heading h3 {
+  margin: 0;
+  color: #234c7d;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ain-ai-v2 .ain-ai-message {
+  color: #2d4969;
+  font-size: 15px;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 10px 0 0 !important;
+}
+
+.ain-ai-v2 .ain-ai-empty {
+  color: #74869d;
+  font-size: 14px;
+}
+
+.ain-ai-v2 .ain-ai-answer-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.ain-ai-v2 .ain-ai-intent {
+  color: #326fa9;
+  background: #e8f1fc;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+}
+
+.ain-ai-v2 .ain-ai-result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.ain-ai-v2 .ain-ai-result-actions .ain-button {
+  font-size: 12px;
+  padding: 6px 9px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ain-ai-v2 .ain-ai-returned-scope {
+  margin: 9px 0 0 !important;
+  font-size: 12px;
+  line-height: 1.65;
+  color: #74869c;
+  overflow-wrap: anywhere;
+}
+
+.ain-ai-v2 .ain-query-scope-warning {
+  margin: 8px 0 0 !important;
+  padding: 8px 10px;
+  color: #94621f;
+  background: #fff5e7;
+  border: 1px solid #f2dab5;
+  border-radius: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.ain-ai-v2 .ain-query-tip {
+  color: #75879e;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  margin-top: 7px;
+}
+
+.ain-ai-v2 .ain-query-error {
+  padding: 10px;
+  margin-top: 10px !important;
+  border-radius: 7px;
+  background: #fff2f2;
+  color: #b44747;
+  font-size: 14px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.ain-ai-v2 .ain-query-footer {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 11px;
+  border-top: 1px solid #e6eef8;
+}
+
+.ain-ai-v2 .ain-query-history-details {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.ain-ai-v2 .ain-query-history-details > summary {
+  cursor: pointer;
+  color: #416992;
+  font-size: 13px;
+}
+
+.ain-ai-v2 .ain-query-history-details > summary span {
+  margin-left: 9px;
+  font-size: 12px;
+  color: #7c8da3;
+}
+
+.ain-ai-v2 .ain-query-history-details > summary:focus-visible {
+  outline: 2px solid #3886ed;
+  outline-offset: 3px;
+}
+
+.ain-ai-v2 .ain-query-history-details .ain-history-close {
+  display: none;
+}
+
+.ain-ai-v2 .ain-query-history-details[open] .ain-history-open {
+  display: none;
+}
+
+.ain-ai-v2 .ain-query-history-details[open] .ain-history-close {
+  display: inline;
+}
+
+.ain-ai-v2 .ain-query-history-note {
+  margin: 9px 0 !important;
+  font-size: 12px;
+  color: #7c8da3;
+}
+
+.ain-ai-v2 .ain-query-clear {
+  border: 0;
+  background: none;
+  color: #426f9e;
+  padding: 0;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ain-ai-v2 .ain-query-clear:disabled {
+  cursor: not-allowed;
+  color: #a4b2bf;
+}
+
+.ain-ai-v2 .ain-query-history {
+  max-height: 260px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  padding-right: 4px;
+}
+
+.ain-ai-v2 .ain-query-empty {
+  color: #75879d;
+  font-size: 13px;
+  padding: 8px 0;
+}
+
+.ain-ai-v2 .ain-query-record {
+  border: 1px solid #deebf7;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 11px;
+  margin-bottom: 8px;
+}
+
+.ain-ai-v2 .ain-query-record-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #7a8ba0;
+  font-size: 12px;
+}
+
+.ain-ai-v2 .ain-query-record-meta time {
+  white-space: nowrap;
+}
+
+.ain-ai-v2 .ain-query-question {
+  color: #315779;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.7;
+  margin-top: 6px !important;
+  overflow-wrap: anywhere;
+}
+
+.ain-ai-v2 .ain-query-answer {
+  color: #61758e;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 5px !important;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.ain-ai-v2 .ain-query-record.is-error {
+  background: #fff7f7;
+  border-color: #efd0d0;
+}
+
+@media (max-width: 1000px) {
+  .ain-ai-v2 .ain-ai-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+}
+
+@media (max-width: 700px) {
+  .ain-workbench .ain-ai-v2 {
+    padding: 16px;
+  }
+
+  .ain-ai-v2 .ain-ai-heading h2 {
+    font-size: 20px;
+  }
+}

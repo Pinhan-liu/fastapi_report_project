@@ -1,0 +1,934 @@
+/* 第一、二批：统一层级与紧凑布局，突出 AI 交互。保留原组件和数据链路。 */
+.ain-app.ain-shell {
+  --ain-font-title: 22px;
+  --ain-font-section: 15px;
+  --ain-font-subtitle: 13px;
+  --ain-font-body: 13px;
+  --ain-font-control: 12px;
+  --ain-font-note: 11px;
+  --ain-font-value: 24px;
+  --ain-ink: #102c65;
+  --ain-copy: #365478;
+  --ain-muted: #60799f;
+  --ain-panel-border: #cde3fc;
+  --ain-panel-shadow: 0 2px 10px rgb(40 103 168 / 5%);
+  font-size: var(--ain-font-body);
+  line-height: 1.5;
+}
+
+/* 页面与公共层级：用更具体的选择器兼容现有重复样式。 */
+.ain-shell .ain-workbench {
+  max-width: 1440px;
+  padding: 12px 24px 28px;
+}
+
+.ain-shell .ain-workbench h2 {
+  color: var(--ain-ink);
+  font-size: var(--ain-font-section);
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.ain-shell .ain-workbench h3 {
+  color: var(--ain-ink);
+  font-size: var(--ain-font-subtitle);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.ain-shell .ain-workbench .ain-muted {
+  color: var(--ain-muted);
+  font-size: var(--ain-font-body);
+}
+
+.ain-shell .ain-workbench-title {
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.ain-shell .ain-workbench-title h1 {
+  color: var(--ain-ink);
+  font-size: var(--ain-font-title);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: .2px;
+}
+
+.ain-shell .ain-workbench-title p {
+  margin-top: 3px;
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-workbench .ain-button {
+  min-height: 30px;
+  padding: 5px 11px;
+  border-radius: 5px;
+  font-size: var(--ain-font-control);
+  line-height: 1.5;
+}
+
+.ain-shell .ain-workbench .ain-source-badge {
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-workbench :is(.ain-filter-panel, .ain-summary-slot,
+  .ain-chart-slot, .ain-evidence-slot, .ain-management-slot) {
+  border-color: var(--ain-panel-border);
+  border-radius: 8px;
+  box-shadow: var(--ain-panel-shadow);
+}
+
+/* AI 交互：第二批适度放大输入与结果区，长回复仍按内容自然增长。 */
+.ain-shell .ain-workbench .ain-ai-v2 {
+  margin-bottom: 10px;
+  padding: 14px 16px;
+  border: 1px solid #b9d9fb;
+  border-top: 2px solid #1685ff;
+  border-radius: 8px;
+  box-shadow: 0 3px 14px rgb(40 103 168 / 7%);
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-heading {
+  gap: 8px 12px;
+  margin-bottom: 10px;
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-heading > div {
+  gap: 8px;
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-heading h2 {
+  color: var(--ain-ink);
+  font-size: 17px;
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-symbol {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  font-size: var(--ain-font-control);
+}
+
+.ain-shell .ain-ai-v2 :is(.ain-ai-badge, .ain-ai-intent) {
+  padding: 2px 7px;
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-scope {
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.ain-shell .ain-ai-v2 .ain-input-label {
+  margin-bottom: 4px;
+  color: var(--ain-copy);
+  font-size: var(--ain-font-control);
+  font-weight: 500;
+}
+
+.ain-shell .ain-ai-v2 .ain-query-form textarea {
+  min-height: 108px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-color: var(--ain-panel-border);
+  background: #fafdff;
+  color: var(--ain-copy);
+  font-size: var(--ain-font-body);
+  line-height: 1.5;
+}
+
+.ain-shell .ain-ai-v2 .ain-query-input-meta {
+  margin-top: 3px;
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-ai-v2 .ain-query-send-row {
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.ain-shell .ain-ai-v2 .ain-query-shortcuts {
+  gap: 6px;
+}
+
+.ain-shell .ain-ai-v2 .ain-query-shortcuts .ain-button {
+  padding: 4px 8px;
+  font-size: var(--ain-font-control);
+}
+
+.ain-shell .ain-ai-v2 .ain-query-send-row > .ain-button {
+  padding: 5px 16px;
+  font-size: var(--ain-font-body);
+  font-weight: 600;
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-answer-column {
+  min-height: 156px;
+  padding: 12px 14px;
+  border-color: var(--ain-panel-border);
+  border-radius: 6px;
+  background: linear-gradient(110deg, #f4faff, #fafdff);
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-answer-heading h3 {
+  font-size: 14px;
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-message {
+  margin-top: 8px !important;
+  color: var(--ain-copy);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.ain-shell .ain-ai-v2 .ain-ai-empty {
+  color: var(--ain-muted);
+  font-size: var(--ain-font-control);
+}
+
+.ain-shell .ain-ai-v2 :is(.ain-ai-returned-scope, .ain-query-tip,
+  .ain-query-history-details > summary, .ain-query-history-details > summary span) {
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-ai-v2 .ain-query-footer {
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+/* 筛选器：标签与控件并排，允许窄屏和长文本换行。 */
+.ain-shell .ain-filter-panel {
+  margin-bottom: 8px;
+  padding: 10px 14px;
+}
+
+.ain-shell .ain-filter-panel .ain-scope-form {
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.ain-shell .ain-filter-panel .ain-scope-form label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-filter-panel .ain-scope-form :is(input, select) {
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 1px solid var(--ain-panel-border);
+  border-radius: 5px;
+  color: var(--ain-ink);
+  background: #fbfdff;
+  font-size: var(--ain-font-control);
+}
+
+.ain-shell .ain-filter-panel .ain-reload {
+  margin-left: auto;
+}
+
+.ain-shell .ain-filter-note {
+  margin-top: 6px !important;
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-filter-panel .ain-data-bar {
+  gap: 4px 14px;
+  margin-top: 6px;
+  padding-top: 6px;
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-filter-panel .ain-loaded-scope {
+  flex-basis: auto;
+  overflow-wrap: anywhere;
+}
+
+.ain-shell :is(.ain-object-bar, .ain-ap-focus-bar) {
+  gap: 6px 18px;
+  margin-bottom: 8px;
+  padding: 7px 12px;
+  border-color: var(--ain-panel-border);
+  border-radius: 6px;
+  font-size: var(--ain-font-control);
+}
+
+.ain-shell .ain-object-bar select {
+  min-width: 90px;
+  padding: 4px 7px;
+  border-radius: 5px;
+}
+
+.ain-shell .ain-object-bar p {
+  flex-basis: auto;
+  font-size: var(--ain-font-note);
+}
+
+/* KPI：数值突出，单位、说明、状态保持次级层次。 */
+.ain-shell .ain-summary-slot {
+  margin-bottom: 8px;
+  padding: 10px 14px;
+}
+
+.ain-shell .ain-kpi-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 7px;
+}
+
+.ain-shell .ain-workbench .ain-kpi-card {
+  padding: 8px 10px;
+  border-radius: 6px;
+  box-shadow: none;
+  background: linear-gradient(110deg, #f6faff, #fff);
+}
+
+.ain-shell .ain-kpi-card:hover {
+  transform: none;
+}
+
+.ain-shell .ain-workbench .ain-kpi-card .ain-kpi-title-row {
+  gap: 6px;
+  margin: 0 0 4px;
+}
+
+.ain-shell .ain-kpi-label {
+  color: var(--ain-ink);
+  font-size: var(--ain-font-note);
+  font-weight: 600;
+}
+
+.ain-shell .ain-kpi-card > div {
+  gap: 5px;
+  margin: 3px 0;
+}
+
+.ain-shell .ain-kpi-value {
+  font-size: var(--ain-font-value);
+  font-weight: 700;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+
+.ain-shell .ain-workbench .ain-kpi-card:not(.ain-kpi-warning) .ain-kpi-value {
+  color: var(--ain-ink);
+}
+
+.ain-shell :is(.ain-kpi-unit, .ain-kpi-note) {
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-workbench .ain-kpi-note {
+  margin-top: 3px;
+  line-height: 1.45;
+}
+
+.ain-shell .ain-kpi-status {
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-extra-metrics {
+  gap: 4px 18px;
+  margin-top: 7px;
+  padding-top: 6px;
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-extra-metrics strong {
+  color: var(--ain-ink);
+  font-weight: 600;
+}
+
+.ain-shell .ain-kpi-scope-note {
+  margin-top: 5px;
+  font-size: var(--ain-font-note);
+  line-height: 1.45;
+}
+
+/* 图表外框与第二批画布：尺寸变化由原 ResizeObserver 自动适配。 */
+.ain-shell .ain-main-grid {
+  grid-template-columns: minmax(0, 2.4fr) minmax(270px, 1fr);
+  align-items: stretch;
+  gap: 8px;
+}
+
+.ain-shell .ain-large-charts {
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+/* 两张地图等宽、等高；说明完整保留在同高的卡片内。 */
+.ain-shell .ain-workbench .ain-large-charts .ain-spatial-chart {
+  min-width: 0;
+  height: 100%;
+}
+.ain-shell .ain-workbench .ain-large-charts .ain-spatial-chart .ain-slot-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  min-height: 48px;
+  box-sizing: border-box;
+  gap: 2px;
+}
+.ain-shell .ain-workbench .ain-large-charts .ain-spatial-footer {
+  flex: 1;
+}
+
+.ain-shell .ain-small-charts {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: repeat(3, auto);
+  gap: 6px;
+}
+
+.ain-shell .ain-workbench .ain-slot-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  padding: 7px 10px;
+  border-left: 0;
+}
+
+.ain-shell .ain-workbench .ain-slot-heading h2 {
+  font-size: var(--ain-font-subtitle);
+  font-weight: 700;
+}
+
+.ain-shell .ain-workbench .ain-slot-heading p {
+  margin: 0;
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.ain-shell .ain-spatial-stage {
+  margin: 0 8px;
+  border-radius: 5px;
+}
+
+.ain-shell .ain-spatial-footer {
+  padding: 6px 10px 8px;
+  border-top: 0;
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+  line-height: 1.5;
+}
+
+.ain-shell .ain-spatial-footer p + p {
+  margin-top: 2px;
+}
+
+.ain-shell :is(.ain-spatial-key, .ain-signal-legend) {
+  gap: 3px 10px;
+  margin-bottom: 4px;
+}
+
+.ain-shell .ain-trend-slot {
+  margin-top: 8px;
+}
+
+.ain-shell .ain-workbench .ain-trend-section {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border-color: var(--ain-panel-border);
+  box-shadow: var(--ain-panel-shadow);
+}
+
+.ain-shell .ain-trend-heading {
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+
+.ain-shell .ain-workbench .ain-trend-grid {
+  gap: 8px;
+}
+
+.ain-shell .ain-workbench .ain-forecast-section {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-color: var(--ain-panel-border);
+  border-radius: 8px;
+  box-shadow: var(--ain-panel-shadow);
+}
+
+.ain-shell .ain-forecast-section .ain-forecast-heading {
+  gap: 4px 10px;
+  margin-bottom: 6px;
+}
+
+.ain-shell .ain-forecast-section .ain-forecast-heading h2 {
+  font-size: var(--ain-font-section);
+}
+
+.ain-shell .ain-forecast-section .ain-forecast-grid {
+  gap: 8px;
+}
+
+.ain-shell .ain-forecast-section :is(.ain-forecast-badge, .ain-forecast-legend) {
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-forecast-section .ain-forecast-method {
+  margin-top: 6px;
+  padding-top: 5px;
+  font-size: var(--ain-font-note);
+}
+
+/* 底部折叠入口与展开区：不改展开状态，不隐藏说明或结果。 */
+.ain-shell .ain-workbench :is(.ain-diagnosis-module.ain-diagnosis-v2,
+  .ain-management-module) {
+  margin-top: 8px;
+  border-color: var(--ain-panel-border);
+  border-radius: 8px;
+  box-shadow: var(--ain-panel-shadow);
+}
+
+.ain-shell .ain-workbench :is(.ain-diagnosis-summary, .ain-management-summary) {
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 7px;
+}
+
+.ain-shell .ain-workbench :is(.ain-diagnosis-summary, .ain-management-summary) .ain-module-title h2 {
+  font-size: var(--ain-font-section);
+}
+
+.ain-shell .ain-workbench :is(.ain-diagnosis-summary, .ain-management-summary) .ain-module-title p {
+  margin-top: 2px;
+  color: var(--ain-muted);
+  font-size: var(--ain-font-note);
+  line-height: 1.5;
+}
+
+.ain-shell .ain-module-number {
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-workbench .ain-module-toggle {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: var(--ain-font-note);
+}
+
+.ain-shell .ain-workbench :is(.ain-diagnosis-content, .ain-management-content) {
+  padding: 8px 12px 12px;
+}
+
+.ain-shell .ain-management-grid {
+  gap: 12px;
+}
+
+.ain-shell .ain-management-column {
+  padding: 12px;
+  border-radius: 7px;
+}
+
+.ain-shell .ain-management-column-title {
+  margin-bottom: 10px;
+}
+
+.ain-shell .ain-management-column-title h3 {
+  font-size: var(--ain-font-subtitle);
+}
+
+.ain-app.ain-shell .ain-footer {
+  padding: 12px 24px;
+}
+
+/* 小屏优先保持可读性，不强制挤成一行。 */
+@media (max-width: 1100px) {
+  .ain-shell .ain-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ain-shell .ain-small-charts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+}
+
+@media (max-width: 1000px) {
+  .ain-shell .ain-ai-v2 .ain-ai-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .ain-shell .ain-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .ain-shell .ain-workbench .ain-trend-grid,
+  .ain-shell .ain-forecast-section .ain-forecast-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .ain-shell .ain-workbench {
+    padding: 12px 12px 22px;
+  }
+  .ain-shell .ain-workbench-title {
+    gap: 4px;
+  }
+  .ain-shell .ain-workbench-title h1 {
+    font-size: 20px;
+  }
+  .ain-shell .ain-large-charts,
+  .ain-shell .ain-small-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ain-shell .ain-filter-panel .ain-scope-form label {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .ain-shell .ain-filter-panel .ain-scope-form :is(input, select) {
+    flex: 1;
+    width: auto;
+    max-width: 78%;
+  }
+  .ain-shell .ain-filter-panel .ain-reload {
+    margin-left: 0;
+  }
+  .ain-shell .ain-workbench :is(.ain-diagnosis-summary, .ain-management-summary) {
+    flex-wrap: wrap;
+  }
+  .ain-app.ain-shell .ain-footer {
+    padding: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ain-shell .ain-kpi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+/* 第二批：AI 主操作保持独立视觉重点，禁用状态沿用原规则。 */
+.ain-shell .ain-ai-v2 .ain-query-send-row > .ain-button.ain-primary:not(:disabled) {
+  border-color: #079ab1;
+  background: linear-gradient(100deg, #078ca5, #0aa8c2);
+  color: #fff;
+}
+
+.ain-shell .ain-ai-v2 .ain-query-send-row > .ain-button.ain-primary:hover:not(:disabled) {
+  border-color: #087b93;
+  background: #087b93;
+}
+
+/* 画布内部高度由各图表组件设定，不用 CSS 强制覆盖 ECharts 的 inline height。 */
+.ain-shell .ain-workbench .ain-real-chart .ain-echart {
+  width: calc(100% - 16px);
+  margin: 0 8px 8px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: transparent;
+}
+
+.ain-shell .ain-spatial-svg {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 640 / 300;
+}
+
+.ain-shell .ain-spatial-stage {
+  background: linear-gradient(135deg, #102036, #15243b);
+}
+
+.ain-shell .ain-scene-axes rect {
+  stroke: #4b6383;
+  stroke-width: 1;
+}
+
+/* 轴名向图框内对齐，窄图框也能完整显示 X / m。 */
+.ain-shell .ain-scene-axes > text[text-anchor="start"] {
+  text-anchor: end;
+}
+
+/* 深色趋势图标题与画布连成一个小面板。 */
+.ain-shell .ain-workbench .ain-trend-grid .ain-real-chart {
+  background: #102036;
+}
+
+.ain-shell .ain-workbench .ain-trend-grid .ain-slot-heading {
+  padding: 6px 10px 2px;
+}
+
+.ain-shell .ain-workbench .ain-trend-grid .ain-slot-heading h2 {
+  color: #edf6ff;
+}
+
+.ain-shell .ain-workbench .ain-trend-grid .ain-slot-heading p {
+  color: #b9ceeb;
+}
+
+.ain-shell .ain-workbench .ain-trend-grid .ain-real-chart .ain-echart {
+  width: 100%;
+  margin: 0;
+  border-radius: 0;
+}
+
+.ain-shell .ain-forecast-section .is-true {
+  background: #ffb32c;
+}
+
+.ain-shell .ain-forecast-section .is-predicted {
+  background: #1685ff;
+}
+
+/* 窄屏继续按横向 viewBox 等比例缩放，不截掉节点。 */
+@media (max-width: 760px) {
+  .ain-shell .ain-spatial-svg {
+    height: auto;
+    aspect-ratio: 640 / 300;
+  }
+  .ain-shell .ain-workbench .ain-ai-v2 {
+    padding: 12px;
+  }
+}
+
+/* 第五批：四个主功能常显，统一标题；AI 是最醒目的交互入口。 */
+.ain-app.ain-shell .ain-workbench .ain-feature-module:is(.ain-ai-v2, .ain-data-module, .ain-diagnosis-v2, .ain-management-module) {
+  margin: 18px 0 0;
+  border: 1px solid #bdd7f5;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 3px 12px rgb(40 103 168 / 5%);
+  scroll-margin-top: 100px;
+  min-width: 0;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module:is(.ain-diagnosis-v2, .ain-management-module) {
+  --ain-detail-title: 20px;
+  --ain-detail-section: 15px;
+  --ain-detail-subtitle: 14px;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module > .ain-feature-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  margin: 0;
+  border-radius: 9px 9px 0 0;
+  border-bottom: 1px solid #dce9f8;
+  background: #f4f8ff;
+  cursor: default;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module .ain-feature-heading .ain-feature-title {
+  margin: 0;
+  color: #173f73;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module .ain-feature-heading .ain-module-title p {
+  margin: 3px 0 0;
+  color: #637d9b;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module .ain-module-number {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  color: #2265b7;
+  background: #e3efff;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module .ain-module-state {
+  margin-left: auto;
+  font-size: 11px;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module > header:focus {
+  outline: 2px solid #6ea8ec;
+  outline-offset: -2px;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module:target {
+  outline: 2px solid #89baf3;
+  outline-offset: 3px;
+}
+
+/* 顶部导航把四个功能及其顺序说清楚，点击仅定位到页面内模块。 */
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 12px 0 0;
+}
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav a {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  align-items: center;
+  gap: 2px 7px;
+  padding: 8px 10px;
+  border: 1px solid #cde0f7;
+  border-radius: 7px;
+  background: #f9fcff;
+  color: #264d7c;
+  text-decoration: none;
+}
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav a > span {
+  grid-row: 1 / 3;
+  color: #3281da;
+  font-size: 16px;
+  font-weight: 700;
+}
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav strong {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav small {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #7288a2;
+}
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav a.ain-workflow-ai {
+  background: #eaf3ff;
+  border-color: #87b9f4;
+}
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav a:hover,
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav a:focus-visible {
+  border-color: #5798e7;
+  background: #edf5ff;
+}
+.ain-app.ain-shell .ain-workbench .ain-workflow-nav a[aria-disabled="true"] {
+  color: #8b9db2;
+  background: #f5f8fc;
+  pointer-events: none;
+}
+
+/* AI 的标题字号与同级一致，用边框、色彩和核心入口标识加强突出程度。 */
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-ai-v2 {
+  padding: 16px;
+  border: 2px solid #79b4f8;
+  border-top: 4px solid #1685ff;
+  background: linear-gradient(120deg, #fff 45%, #eff7ff);
+  box-shadow: 0 6px 22px rgb(22 133 255 / 12%);
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-ai-v2 > .ain-ai-heading {
+  padding: 0 0 11px;
+  margin-bottom: 12px;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid #d5e7ff;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-ai-v2 .ain-feature-title {
+  color: #075aba;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-ai-v2 .ain-ai-symbol {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-ai-v2 .ain-ai-badge {
+  padding: 3px 8px;
+  color: #1263b6;
+  background: #dfedff;
+  border: 1px solid #b9d6ff;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* 数据展示单独成区，内部图表和原控件仍保持第四批布局。 */
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-data-module {
+  padding: 0 12px 12px;
+  background: #f7faff;
+}
+.ain-app.ain-shell .ain-workbench .ain-data-module > .ain-data-heading {
+  margin: 0 -12px 12px;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-context {
+  margin-left: auto;
+  color: #6481a3;
+  font-size: 11px;
+}
+
+/* 主模块常显，用蓝/青色标题带与编号区分研判和操作。 */
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-diagnosis-v2 > header {
+  border-left: 4px solid #3185df;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-management-module > header {
+  border-left: 4px solid #16a3a0;
+  background: #f0faf9;
+}
+.ain-app.ain-shell .ain-workbench .ain-feature-module.ain-management-module .ain-module-number {
+  color: #087c79;
+  background: #def3ef;
+}
+.ain-app.ain-shell .ain-workbench .ain-module-handoff {
+  margin: 12px 8px -6px;
+  padding: 7px 10px;
+  border-left: 2px solid #94bde9;
+  color: #456a94;
+}
+.ain-app.ain-shell .ain-workbench .ain-module-handoff > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  align-items: center;
+  font-size: 12px;
+}
+.ain-app.ain-shell .ain-workbench .ain-module-handoff strong {
+  font-weight: 600;
+}
+.ain-app.ain-shell .ain-workbench .ain-module-handoff p {
+  margin: 3px 0 0;
+  color: #6b82a0;
+  font-size: 11px;
+  line-height: 1.5;
+}
+@media (max-width: 1000px) {
+  .ain-app.ain-shell .ain-workbench .ain-workflow-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  .ain-app.ain-shell .ain-workbench .ain-feature-module > .ain-feature-heading {
+    padding: 10px;
+  }
+  .ain-app.ain-shell .ain-workbench .ain-feature-module .ain-module-state,
+  .ain-app.ain-shell .ain-workbench .ain-feature-context {
+    margin-left: 40px;
+    flex-basis: 100%;
+  }
+  .ain-app.ain-shell .ain-workbench .ain-feature-module.ain-ai-v2 {
+    padding: 12px;
+  }
+  .ain-app.ain-shell .ain-workbench .ain-feature-module.ain-data-module {
+    padding: 0 8px 8px;
+  }
+  .ain-app.ain-shell .ain-workbench .ain-data-module > .ain-data-heading {
+    margin: 0 -8px 10px;
+  }
+}
