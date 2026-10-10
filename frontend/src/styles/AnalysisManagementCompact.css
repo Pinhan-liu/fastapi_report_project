@@ -1,0 +1,823 @@
+/* 第三批：仅调整「故障研判与证据」「操作建议与效果验证」。
+   保留状态色与全部内容；用内容高度、分区标题和分隔线代替层层大外框。 */
+.ain-shell .ain-workbench :is(.ain-diagnosis-module.ain-diagnosis-v2, .ain-management-module) {
+  --ain-detail-title: 16px;
+  --ain-detail-section: 14px;
+  --ain-detail-subtitle: 13px;
+  --ain-detail-body: 12px;
+  --ain-detail-note: 11px;
+  --ain-detail-value: 20px;
+  border-color: #d1e3f8;
+  border-radius: 8px;
+  box-shadow: none;
+  min-height: 0;
+  font-size: var(--ain-detail-body);
+  line-height: 1.55;
+}
+
+/* 第四批只提升研判模块层级，管理模块继续使用第三批字号。 */
+.ain-shell .ain-workbench .ain-diagnosis-module.ain-diagnosis-v2 {
+  --ain-detail-title: 18px;
+  --ain-detail-section: 15px;
+  --ain-detail-subtitle: 14px;
+}
+
+/* 两个模块共同的标题、说明与操作尺寸。 */
+.ain-shell .ain-workbench :is(.ain-diagnosis-module.ain-diagnosis-v2, .ain-management-module) .ain-module-title h2 {
+  font-size: var(--ain-detail-title);
+  font-weight: 700;
+  color: #173b6c;
+}
+.ain-shell .ain-workbench :is(.ain-diagnosis-module.ain-diagnosis-v2, .ain-management-module) .ain-module-title p {
+  font-size: var(--ain-detail-note);
+  font-weight: 400;
+  line-height: 1.45;
+  color: #6a7f9b;
+}
+.ain-shell .ain-workbench :is(.ain-diagnosis-module.ain-diagnosis-v2, .ain-management-module) .ain-module-state {
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench :is(.ain-diagnosis-module.ain-diagnosis-v2, .ain-management-module) .ain-button {
+  min-height: 28px;
+  padding: 4px 9px;
+  border-radius: 5px;
+  font-size: var(--ain-detail-body);
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench :is(.ain-diagnosis-module.ain-diagnosis-v2, .ain-management-module)
+  :is(.ain-diagnosis-content, .ain-management-content) {
+  padding: 8px 12px 12px;
+}
+
+/* 研判：外壳已经是主面板，证据容器不再重复套一个框。 */
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-slot {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-toolbar-v2 {
+  gap: 8px;
+  padding: 3px 0 8px;
+  border-top: 0;
+  border-bottom: 1px solid #e4edf8;
+  margin-bottom: 8px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-sources {
+  padding: 2px;
+  border-radius: 6px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-sources button {
+  padding: 4px 9px;
+  font-size: var(--ain-detail-body);
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 :is(.ain-scope-context, .ain-analysis-note) {
+  margin: 5px 0;
+  font-size: var(--ain-detail-note);
+  line-height: 1.5;
+  color: #6a7f9b;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-meta {
+  gap: 3px 10px;
+  margin: 0 0 8px;
+  font-size: var(--ain-detail-note);
+  color: #6a7f9b;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-meta strong {
+  color: #375579;
+  font-size: var(--ain-detail-section);
+  font-weight: 700;
+}
+
+/* 结论和指标先对齐分区标题，再对齐卡片顶边；各自按内容取高。 */
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-snapshot {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  align-items: start;
+  gap: 12px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-snapshot .ain-diagnosis-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 3px 6px;
+  align-self: start;
+  min-height: 0;
+  padding: 6px 8px;
+  margin: 0;
+  border: 0;
+  border-radius: 3px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-verdict-column {
+  min-width: 0;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-verdict-heading,
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-metrics > h3 {
+  margin: 0 0 5px;
+  font-size: var(--ain-detail-section);
+  font-weight: 700;
+  line-height: 1.4;
+  color: #21446f;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-snapshot .ain-diagnosis-overview.is-anomaly {
+  border-left: 2px solid #d99a40;
+  background: #fffbf5;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-snapshot .ain-diagnosis-overview.is-normal {
+  border-left: 2px solid var(--ain-success-border);
+  background: #f8fcfa;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-conclusion-head {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+  gap: 8px;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-conclusion-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-conclusion-head .ain-diagnosis-score {
+  padding: 0;
+  gap: 4px;
+  background: transparent;
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-conclusion-head .ain-diagnosis-score strong {
+  font-size: 15px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-overview .ain-conclusion-tags {
+  grid-column: 1 / -1;
+  gap: 5px;
+  margin: 0;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-conclusion-tags > * {
+  padding: 0 4px;
+  font-size: var(--ain-detail-note);
+  line-height: 1.45;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-overview .ain-analysis-observation {
+  grid-column: 1 / -1;
+  margin: 0 !important;
+  font-size: var(--ain-detail-body);
+  line-height: 1.55;
+  color: #405974;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-snapshot .ain-evidence-metrics {
+  align-self: start;
+  padding: 0;
+  margin: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 6px;
+  margin-top: 0;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-metric-grid article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 3px 8px;
+  padding: 5px 7px;
+  border-radius: 5px;
+  min-width: 0;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-metric-evidence-head {
+  grid-column: 1 / -1;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-metric-evidence-head h4 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-metric-evidence-head span {
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-metric-grid strong {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-metric-grid p {
+  margin: 0;
+  font-size: var(--ain-detail-note);
+  line-height: 1.4;
+}
+
+/* 研判线索分为观测、判定、可能原因；只给一条公共分隔线。 */
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-strip {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  margin: 8px 0 0;
+  padding: 8px 0;
+  border-top: 1px solid #e4edf8;
+  border-bottom: 1px solid #e4edf8;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-strip > h3 {
+  margin: 0;
+  font-size: var(--ain-detail-section);
+  font-weight: 700;
+  color: #21446f;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-flow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .7fr) minmax(0, 1.5fr);
+  gap: 14px;
+  margin: 0;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-flow li {
+  display: block;
+  position: relative;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-flow .ain-flow-label {
+  display: block;
+  margin-bottom: 2px;
+  color: #375579;
+  font-size: var(--ain-detail-subtitle);
+  font-weight: 600;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-flow strong {
+  display: block;
+  margin: 0;
+  font-size: var(--ain-detail-body);
+  font-weight: 500;
+  line-height: 1.55;
+  color: #405b7a;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-flow span {
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-flow li:not(:last-child)::after {
+  position: absolute;
+  right: -12px;
+  top: 18px;
+  margin: 0;
+  color: #98abc4;
+}
+
+/* 候选按钮是选择入口；详情用分区标题区分三类依据。 */
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidates-v2 {
+  margin-top: 10px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidates-heading {
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidates-heading h3 {
+  font-size: var(--ain-detail-section);
+  font-weight: 700;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidates-heading h3 span,
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidates-heading > span {
+  font-size: var(--ain-detail-note);
+  font-weight: 400;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs .ain-candidate-button {
+  min-width: 0;
+  width: 100%;
+  padding: 6px 8px;
+  gap: 8px;
+  border-radius: 5px;
+  background: #fff;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs .ain-candidate-button strong {
+  font-size: var(--ain-detail-body);
+  font-weight: 500;
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs .ain-candidate-button span {
+  font-size: var(--ain-detail-note);
+  white-space: nowrap;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs .ain-candidate-button.is-selected {
+  border-color: #8ab9f1;
+  background: #edf5ff;
+  box-shadow: inset 3px 0 #1685ff;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-cause-card {
+  padding: 8px 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-cause-card-heading {
+  gap: 5px 10px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-cause-card-heading h3 {
+  font-size: var(--ain-detail-subtitle);
+  font-weight: 600;
+  line-height: 1.5;
+  color: #21446f;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-cause-card-heading > span {
+  font-size: var(--ain-detail-note);
+  color: #6a7f9b;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-proof-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  margin-top: 7px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group {
+  padding-left: 8px;
+  border-left-width: 2px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group h4 {
+  margin: 0 0 3px;
+  font-size: var(--ain-detail-subtitle);
+  font-weight: 600;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group :is(li, p) {
+  margin: 2px 0;
+  color: #405b7a;
+  font-size: var(--ain-detail-body);
+  line-height: 1.55;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-prepare-action {
+  padding: 6px 9px;
+  margin: 6px 0 8px;
+  gap: 8px;
+  border-radius: 5px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-prepare-action > strong {
+  font-size: var(--ain-detail-subtitle);
+}
+
+/* AP 汇总与补充证据保持完整，仅降低行高与边框重量。 */
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-table-scroll {
+  margin-top: 8px;
+  border-color: #e1eaf6;
+  border-radius: 5px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-comparison caption {
+  padding: 6px 9px;
+  font-size: var(--ain-detail-section);
+  font-weight: 700;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-comparison :is(th, td) {
+  padding: 6px 9px;
+  font-size: var(--ain-detail-body);
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-more-evidence {
+  margin-top: 7px;
+  border-color: #e1eaf6;
+  border-radius: 5px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-more-evidence > summary {
+  padding: 6px 9px;
+  border-radius: 5px;
+  font-size: var(--ain-detail-subtitle);
+  font-weight: 600;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-more-evidence > div {
+  padding: 8px 9px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-more-evidence > div > h3 {
+  font-size: var(--ain-detail-subtitle);
+  margin-bottom: 5px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-more-evidence > ul {
+  padding: 5px 10px 5px 26px;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-more-evidence > ul > li {
+  margin: 4px 0;
+  font-size: var(--ain-detail-body);
+  line-height: 1.55;
+}
+.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-more-evidence > ul > li p {
+  margin-top: 2px;
+  color: #6a7f9b;
+  font-size: var(--ain-detail-note);
+}
+
+/* 管理：状态提示与流程作为一条紧凑工具区。 */
+.ain-shell .ain-workbench .ain-management-module .ain-execution-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 3px 10px;
+  margin: 0 0 7px;
+  padding: 7px 9px;
+  border-radius: 5px;
+  border: 1px solid var(--ain-warning-border);
+  background: var(--ain-warning-bg);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-execution-top > strong {
+  font-size: var(--ain-detail-body);
+  color: var(--ain-warning);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-execution-top p {
+  margin: 0;
+  font-size: var(--ain-detail-note);
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-steps {
+  gap: 6px;
+  margin: 0 0 7px;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-steps li {
+  gap: 5px;
+  min-height: 29px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  font-size: var(--ain-detail-note);
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-steps li > span {
+  min-width: 18px;
+  height: 18px;
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-scope {
+  margin: 0 0 8px;
+  color: #6a7f9b;
+  font-size: var(--ain-detail-note);
+}
+
+/* 两栏按自身内容取高度，右栏不再被左侧长表单撑高。 */
+.ain-shell .ain-workbench .ain-management-module .ain-management-grid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 14px;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-column {
+  align-self: start;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  min-width: 0;
+  min-height: 0;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-column + .ain-management-column {
+  padding-left: 14px;
+  border-left: 1px solid #e4edf8;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-column-title {
+  gap: 8px;
+  margin-bottom: 7px;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-column-title h3 {
+  color: #21446f;
+  font-size: var(--ain-detail-section);
+  font-weight: 600;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-column-title > span {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-group-heading {
+  margin: 0 0 5px;
+  padding-left: 6px;
+  border-left: 2px solid #1685ff;
+  color: #21446f;
+  font-size: var(--ain-detail-subtitle);
+  font-weight: 600;
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-suggestion-card {
+  padding: 7px 9px;
+  margin-bottom: 6px;
+  border-radius: 5px;
+  border-color: #dfebf7;
+  border-left-color: #15a8a0;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-suggestion-card h4 {
+  margin: 0 0 3px;
+  font-size: var(--ain-detail-body);
+  font-weight: 600;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-suggestion-text {
+  margin: 3px 0 5px;
+  font-size: var(--ain-detail-body);
+  line-height: 1.55;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-management-muted {
+  margin: 4px 0;
+  color: #6a7f9b;
+  font-size: var(--ain-detail-note);
+  line-height: 1.5;
+}
+
+/* 原控件按「对象与依据」「参数与备注」分组，表单事件和校验不变。 */
+.ain-shell .ain-workbench .ain-management-module .ain-plan-form {
+  display: block;
+  margin-top: 8px;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-plan-fieldset {
+  min-width: 0;
+  margin: 10px 0 0;
+  padding: 7px 0 0;
+  border: 0;
+  border-top: 1px solid #e4edf8;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-plan-fieldset legend {
+  padding: 0 8px 0 0;
+  color: #21446f;
+  font-size: var(--ain-detail-subtitle);
+  font-weight: 600;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-field-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 10px;
+  align-items: start;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-plan-form label {
+  gap: 3px;
+  color: #506987;
+  font-size: var(--ain-detail-note);
+  font-weight: 500;
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-plan-form :is(input, select, textarea) {
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 8px;
+  border-radius: 5px;
+  border-color: #d4e3f6;
+  background: #fff;
+  color: #294d76;
+  font-size: var(--ain-detail-body);
+  font-weight: 400;
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-plan-form textarea {
+  min-height: 48px;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-use-focus {
+  grid-column: auto;
+  align-self: end;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-use-focus .ain-button {
+  width: 100%;
+  min-height: 30px;
+  white-space: normal;
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-current-config {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-current-config strong {
+  padding: 0;
+  color: #6a7f9b;
+  font-size: var(--ain-detail-note);
+  font-weight: 400;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-plan-actions {
+  gap: 6px;
+  margin-top: 7px;
+}
+.ain-shell .ain-workbench .ain-management-module :is(.ain-management-warning, .ain-management-notice) {
+  padding: 6px 8px;
+  margin: 6px 0;
+  border-radius: 5px;
+  font-size: var(--ain-detail-body);
+  line-height: 1.5;
+}
+
+/* 基线和待验证结果按信息量展示，不用高大的空白占位框。 */
+.ain-shell .ain-workbench .ain-management-module .ain-management-empty {
+  margin: 4px 0;
+  padding: 7px 9px;
+  border-radius: 5px;
+  font-size: var(--ain-detail-note);
+  line-height: 1.55;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-plan-overview {
+  padding: 7px 9px;
+  margin: 0 0 7px;
+  border-radius: 5px;
+  font-size: var(--ain-detail-body);
+  line-height: 1.55;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-baseline-info {
+  margin-bottom: 7px;
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-baseline-info > strong {
+  font-size: var(--ain-detail-body);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-baseline-info p {
+  margin: 3px 0;
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-comparison-table {
+  font-size: var(--ain-detail-body);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-comparison-table caption {
+  padding-bottom: 5px;
+  color: #6a7f9b;
+  font-size: var(--ain-detail-note);
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-comparison-table :is(th, td) {
+  padding: 6px 7px;
+  font-size: var(--ain-detail-body);
+  line-height: 1.5;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-comparison-table small {
+  margin-top: 2px;
+  font-size: var(--ain-detail-note);
+}
+.ain-shell .ain-workbench .ain-management-module .ain-effect-pending {
+  margin-top: 9px;
+  padding: 7px 9px;
+  border-radius: 5px;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-effect-pending h4 {
+  margin: 0 0 4px;
+  font-size: var(--ain-detail-subtitle);
+  font-weight: 600;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-effect-pending :is(p, li) {
+  font-size: var(--ain-detail-body);
+  line-height: 1.55;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-effect-pending ul {
+  margin: 4px 0 0;
+}
+.ain-shell .ain-workbench .ain-management-module .ain-execution-controls {
+  margin-top: 7px;
+}
+
+/* 窄屏回到自然排列，标题与内容均不截断。 */
+@media (max-width: 1200px) {
+  .ain-shell .ain-workbench .ain-management-module .ain-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ain-shell .ain-workbench .ain-management-module .ain-use-focus {
+    grid-column: 1 / -1;
+  }
+}
+@media (max-width: 1100px) {
+  .ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 980px) {
+  .ain-shell .ain-workbench .ain-management-module .ain-management-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ain-shell .ain-workbench .ain-management-module .ain-management-column + .ain-management-column {
+    padding: 10px 0 0;
+    border-left: 0;
+    border-top: 1px solid #e4edf8;
+  }
+}
+@media (max-width: 950px) {
+  .ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-snapshot {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-strip {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .ain-shell .ain-workbench .ain-diagnosis-v2 :is(.ain-reason-flow, .ain-proof-grid, .ain-candidate-tabs) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .ain-shell .ain-workbench .ain-management-module .ain-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 5.1 小修：研判按阅读层次分组，保留全部文本与交互。 */
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-meta {
+  align-items: baseline;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-meta strong {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-reading {
+  padding: 10px;
+  border-radius: 7px;
+  background: #f8fbff;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-diagnosis-snapshot {
+  gap: 14px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-strip {
+  margin-top: 12px;
+  padding: 10px 0 0;
+  border-bottom: 0;
+  gap: 10px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-strip > h3 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #587394;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-flow .ain-flow-label {
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-reason-flow strong {
+  font-weight: 400;
+  line-height: 1.7;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidates-v2 {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e3ecf8;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidates-heading {
+  margin-bottom: 9px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs {
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs .ain-candidate-button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 5px 10px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs .ain-candidate-button strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-weight: 400;
+  line-height: 1.65;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidate-tabs .ain-candidate-button span {
+  align-self: start;
+  padding-top: 1px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-candidates-v2 > .ain-cause-card .ain-cause-card-heading {
+  padding: 7px 9px;
+  border-radius: 5px;
+  background: #f4f8ff;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-proof-grid {
+  gap: 14px;
+  margin-top: 10px;
+  align-items: start;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group {
+  padding: 8px 10px;
+  border-radius: 0 5px 5px 0;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group.ain-support {
+  background: #f3faf7;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group.ain-against {
+  background: #fff9f1;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group.ain-missing {
+  background: #f4f8ff;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group h4 {
+  margin-bottom: 5px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-evidence-group :is(li, p) {
+  margin: 4px 0;
+  line-height: 1.7;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-table-scroll {
+  margin-top: 16px;
+}
+.ain-app.ain-shell .ain-workbench .ain-diagnosis-v2 .ain-prepare-action {
+  margin: 14px 0 0;
+  padding: 9px 11px;
+  border-left: 3px solid #4a98ef;
+  background: #edf5ff;
+}

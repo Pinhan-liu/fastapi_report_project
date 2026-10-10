@@ -1,0 +1,213 @@
+/* 第4步：统一操作、异常、状态与提醒 */
+.ain-app.ain-shell {
+  --ain-action: #2563eb;
+  --ain-action-hover: #1d4ed8;
+
+  --ain-info-bg: #edf4ff;
+  --ain-info-border: #cddffb;
+
+  --ain-warning: #9a5b13;
+  --ain-warning-bg: #fff6e9;
+  --ain-warning-border: #efc88f;
+
+  --ain-error: #b13d39;
+  --ain-error-bg: #fff1ef;
+  --ain-error-border: #efb9b4;
+
+  --ain-success: #16765e;
+  --ain-success-bg: #eef8f3;
+  --ain-success-border: #c2e3d4;
+}
+
+/* 主操作统一为蓝色 */
+.ain-shell .ain-button.ain-primary:not(:disabled) {
+  color: #fff;
+  border-color: var(--ain-action);
+  background: var(--ain-action);
+}
+
+.ain-shell .ain-button.ain-primary:hover:not(:disabled) {
+  color: #fff;
+  border-color: var(--ain-action-hover);
+  background: var(--ain-action-hover);
+}
+
+.ain-shell .ain-button:not(.ain-primary):hover:not(:disabled) {
+  color: var(--ain-action);
+  border-color: #9dbdf1;
+  background: #f3f7ff;
+}
+
+/* 状态标签保留文字，不只依赖颜色 */
+.ain-shell [data-tone] {
+  display: inline-flex;
+  align-items: center;
+
+  padding: 4px 8px;
+  border: 1px solid #dce5ef;
+  border-radius: 7px;
+
+  color: #63758b;
+  background: #f3f6fa;
+
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.ain-shell [data-tone="info"] {
+  color: #315fa5;
+  background: var(--ain-info-bg);
+  border-color: var(--ain-info-border);
+}
+
+.ain-shell [data-tone="warning"] {
+  color: var(--ain-warning);
+  background: var(--ain-warning-bg);
+  border-color: var(--ain-warning-border);
+}
+
+.ain-shell [data-tone="error"] {
+  color: var(--ain-error);
+  background: var(--ain-error-bg);
+  border-color: var(--ain-error-border);
+}
+
+.ain-shell [data-tone="success"] {
+  color: var(--ain-success);
+  background: var(--ain-success-bg);
+  border-color: var(--ain-success-border);
+}
+
+/* 核心指标的标题与状态标签 */
+.ain-shell .ain-workbench .ain-kpi-card .ain-kpi-title-row {
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 9px;
+}
+
+.ain-shell .ain-kpi-title-row .ain-kpi-label {
+  margin: 0;
+}
+
+.ain-shell .ain-kpi-status {
+  white-space: nowrap;
+}
+
+/* 吞吐量低于实际业务需求 */
+.ain-shell .ain-workbench .ain-kpi-card.ain-kpi-warning {
+  border-color: var(--ain-warning-border);
+  border-left: 3px solid #d99a40;
+  background: var(--ain-warning-bg);
+}
+
+.ain-shell .ain-workbench .ain-kpi-warning .ain-kpi-value,
+.ain-shell .ain-workbench .ain-kpi-warning .ain-kpi-note {
+  color: var(--ain-warning);
+}
+
+.ain-shell .ain-kpi-scope-note {
+  margin-top: 11px;
+  color: #667d98;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+/* 时段研判的异常总结 */
+.ain-shell .ain-diagnosis-overview.is-anomaly {
+  background: var(--ain-warning-bg);
+  border-color: var(--ain-warning-border);
+  border-left: 3px solid #d99a40;
+}
+
+.ain-shell .ain-diagnosis-overview.is-anomaly h3,
+.ain-shell .ain-diagnosis-overview.is-anomaly .ain-diagnosis-score strong {
+  color: var(--ain-warning);
+}
+
+/* 后端判定未发现明显异常 */
+.ain-shell .ain-diagnosis-overview.is-normal {
+  background: var(--ain-success-bg);
+  border-color: var(--ain-success-border);
+}
+
+/* 后端明确标注异常的指标证据 */
+.ain-shell .ain-evidence-metric-grid article[data-evidence-status="warning"] {
+  background: var(--ain-warning-bg);
+  border-color: var(--ain-warning-border);
+  border-left: 3px solid #d99a40;
+}
+
+.ain-shell .ain-evidence-metric-grid article[data-evidence-status="warning"] strong,
+.ain-shell .ain-evidence-metric-grid article[data-evidence-status="warning"] span {
+  color: var(--ain-warning);
+}
+
+/* 后端明确标注正常的指标证据 */
+.ain-shell .ain-evidence-metric-grid article[data-evidence-status="success"] {
+  background: var(--ain-success-bg);
+  border-color: var(--ain-success-border);
+}
+
+.ain-shell .ain-evidence-metric-grid article[data-evidence-status="success"] span {
+  color: var(--ain-success);
+}
+
+/* 来源标识不代表操作成功 */
+.ain-shell .ain-result-badge {
+  color: #315fa5;
+  background: var(--ain-info-bg);
+  border: 1px solid var(--ain-info-border);
+}
+
+/* 当前选中的研判来源或建议 */
+.ain-shell .ain-diagnosis-sources button.is-active,
+.ain-shell .ain-suggestion-card button[aria-pressed="true"] {
+  color: var(--ain-action);
+  background: var(--ain-info-bg);
+  border-color: #9dbdf1;
+}
+
+/* 请求、分析失败 */
+.ain-shell .ain-workbench .ain-error,
+.ain-shell .ain-query-error,
+.ain-shell .ain-query-record.is-error {
+  color: var(--ain-error);
+  background: var(--ain-error-bg);
+  border: 1px solid var(--ain-error-border);
+  border-left: 3px solid #d56c62;
+}
+
+/* 方案填写、范围不匹配等待处理提醒 */
+.ain-shell .ain-management-warning {
+  color: var(--ain-warning);
+  background: var(--ain-warning-bg);
+  border: 1px solid var(--ain-warning-border);
+  border-left: 3px solid #d99a40;
+}
+
+/* 草稿生成、下载启动等完成提示 */
+.ain-shell .ain-management-notice {
+  color: var(--ain-success);
+  background: var(--ain-success-bg);
+  border: 1px solid var(--ain-success-border);
+}
+
+/* 仿真暂不可用的提醒 */
+.ain-shell .ain-execution-state {
+  background: var(--ain-warning-bg);
+  border: 1px solid var(--ain-warning-border);
+  border-left: 3px solid #d99a40;
+}
+
+.ain-shell .ain-execution-state > strong {
+  color: var(--ain-warning);
+}
+
+/* 数据加载与空数据说明 */
+.ain-shell .ain-workbench .ain-load-state {
+  color: #315fa5;
+  background: var(--ain-info-bg);
+  border-color: var(--ain-info-border);
+}

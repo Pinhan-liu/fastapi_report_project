@@ -1,0 +1,382 @@
+/* 工作台样式；首页与导航沿用第一批。 */
+.ain-workbench {
+  width: 100%;
+  max-width: 1760px;
+  margin: 0 auto;
+  padding: 26px 28px 42px;
+}
+
+.ain-workbench h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.ain-workbench h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.ain-workbench .ain-muted {
+  color: #52677f;
+  font-size: 13px;
+}
+
+.ain-workbench-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.ain-workbench-title h1 {
+  color: #183b67;
+  font-size: 25px;
+  line-height: 1.4;
+}
+
+.ain-workbench-title p {
+  color: #52677f;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.ain-workbench .ain-source-badge {
+  display: inline-block;
+  color: #146da8;
+  background: #eaf5ff;
+  border: 1px solid #d1e8fb;
+  padding: 4px 9px;
+  border-radius: 7px;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.ain-filter-panel,
+.ain-summary-slot,
+.ain-evidence-slot,
+.ain-chart-slot,
+.ain-management-slot {
+  background: #fff;
+  border: 1px solid #dce7f2;
+  border-radius: 15px;
+  box-shadow: 0 5px 18px rgba(37, 76, 126, 0.045);
+  min-width: 0;
+}
+
+.ain-filter-panel {
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+/* 兼容原 BackendIntegration.css。 */
+.ain-filter-panel .ain-scope-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.ain-filter-panel .ain-scope-form label {
+  color: #59738e;
+  font-size: 12px;
+}
+
+.ain-filter-panel .ain-scope-form input,
+.ain-filter-panel .ain-scope-form select {
+  color: #254767;
+  border-color: #d5e3f1;
+  background: #f9fcff;
+  min-height: 38px;
+}
+
+.ain-filter-note {
+  color: #52677f;
+  font-size: 11px;
+  margin-top: 11px !important;
+}
+
+.ain-filter-panel .ain-data-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  color: #52677f;
+  font-size: 12px;
+  border-top: 1px solid #e8eff7;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.ain-filter-panel .ain-loaded-scope {
+  flex-basis: 100%;
+  color: #47698c;
+  font-size: 11px;
+}
+
+.ain-object-bar,
+.ain-ap-focus-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid #d6e8f5;
+  border-radius: 12px;
+  background: #f3faff;
+  color: #5a7792;
+  font-size: 12px;
+}
+
+.ain-object-bar label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.ain-object-bar select {
+  min-width: 100px;
+  padding: 6px 9px;
+  border: 1px solid #cbdff0;
+  border-radius: 7px;
+  background: #fff;
+  color: #244d76;
+  font: inherit;
+}
+
+.ain-object-bar strong,
+.ain-ap-focus-bar strong {
+  color: #205e98;
+  font-weight: 600;
+}
+
+.ain-object-bar p {
+  flex-basis: 100%;
+  color: #52677f;
+  font-size: 11px;
+}
+
+.ain-ap-focus-bar {
+  background: #f0fbf8;
+  border-color: #cfeae2;
+  gap: 10px 14px;
+}
+
+.ain-ap-focus-bar .ain-ap-ue-buttons {
+  margin-top: 0;
+}
+
+.ain-ap-focus-bar .ain-button {
+  padding: 6px 10px;
+  font-size: 11px;
+}
+
+.ain-summary-slot,
+.ain-evidence-slot {
+  padding: 17px 18px;
+}
+
+.ain-summary-slot {
+  margin-bottom: 18px;
+}
+
+.ain-summary-slot p,
+.ain-evidence-slot p {
+  margin-top: 7px;
+}
+
+.ain-workbench .ain-kpi-card {
+  background: #f7fbff;
+  border-color: #e0eaf6;
+}
+
+.ain-workbench .ain-kpi-card.ain-kpi-warning {
+  background: #fff8ee;
+  border-color: #edc9a7;
+}
+
+.ain-workbench
+  .ain-kpi-card:not(.ain-kpi-warning)
+  .ain-kpi-value {
+  color: #1f568e;
+}
+
+.ain-main-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 2.7fr)
+    minmax(220px, 1fr);
+  gap: 16px;
+  align-items: stretch;
+}
+
+.ain-large-charts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  min-width: 0;
+}
+
+.ain-small-charts {
+  display: grid;
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.ain-chart-slot {
+  overflow: hidden;
+}
+
+.ain-slot-heading {
+  padding: 13px 15px;
+  border-left: 3px solid #3388ec;
+}
+
+.ain-slot-heading p {
+  margin-top: 4px;
+  color: #52677f;
+  font-size: 11px;
+}
+
+.ain-small-charts .ain-slot-heading {
+  padding: 9px 12px;
+}
+
+.ain-small-charts h2 {
+  font-size: 13px;
+}
+
+.ain-trend-slot {
+  margin-top: 18px;
+}
+
+.ain-workbench .ain-trend-section {
+  border-color: #dce7f2;
+}
+
+.ain-analysis-section {
+  margin-top: 22px;
+}
+
+.ain-section-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ain-section-actions h2 {
+  color: #244a75;
+}
+
+.ain-section-actions p {
+  color: #52677f;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.ain-management-slot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 18px;
+  margin-top: 20px;
+}
+
+.ain-management-slot p {
+  color: #52677f;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.ain-management-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ain-load-state {
+  padding: 16px;
+  background: #eef7ff;
+  border: 1px solid #dbeafa;
+  border-radius: 11px;
+  margin-bottom: 18px !important;
+  color: #506f90;
+  font-size: 13px;
+}
+
+.ain-load-state p {
+  margin-top: 5px;
+}
+
+.ain-error {
+  padding: 16px;
+  background: #fff3ee;
+  border: 1px solid #efcfc2;
+  border-radius: 11px;
+  margin-bottom: 18px;
+  color: #93573d;
+  font-size: 13px;
+}
+
+.ain-error button {
+  margin-top: 10px;
+}
+
+@media (max-width: 1150px) {
+  .ain-main-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ain-small-charts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-rows: auto;
+  }
+}
+
+@media (min-width: 901px) {
+  .ain-workbench .ain-trend-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .ain-workbench {
+    padding: 20px 16px 30px;
+  }
+
+  .ain-workbench-title {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .ain-workbench-title h1 {
+    font-size: 22px;
+  }
+
+  .ain-large-charts,
+  .ain-small-charts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ain-filter-panel .ain-scope-form label {
+    min-width: 0;
+  }
+
+  .ain-filter-panel .ain-scope-form input,
+  .ain-filter-panel .ain-scope-form select {
+    width: 100%;
+  }
+}

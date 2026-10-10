@@ -1,0 +1,62 @@
+.ain-workbench .ain-tool-result-v2 {
+  margin: 16px 0;
+  padding: 18px;
+  min-width: 0;
+  border: 1px solid #d3e3f5;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 5px 18px #30629a09;
+  scroll-margin-top: 100px;
+}
+
+.ain-tool-result-v2 .ain-tool-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ain-tool-result-v2 .ain-tool-heading h2 {
+  margin: 0;
+  color: #214875;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.ain-tool-result-v2 .ain-tool-heading span {
+  padding: 4px 8px;
+  border-radius: 5px;
+  color: #3276b9;
+  background: #eaf4ff;
+  font-size: 12px;
+}
+
+.ain-tool-result-v2 .ain-tool-scope {
+  color: #77899e;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  margin: 7px 0 12px;
+}
+
+.ain-tool-result-v2 > figure {
+  margin: 0;
+}
+
+.ain-tool-result-v2 .ain-slot-heading h2 {
+  font-size: 15px;
+}
+
+.ain-tool-result-v2 .ain-slot-heading p {
+  font-size: 12px;
+}
+
+.ain-tool-result-v2 .ain-tool-unsupported {
+  margin: 0;
+  padding: 12px;
+  color: #9b6b24;
+  background: #fff6e7;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.7;
+}

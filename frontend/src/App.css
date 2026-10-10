@@ -1,0 +1,382 @@
+/* 新的全局样式兼容原工作台 */
+@import "./styles/StatusFeedback.css";
+@import "./styles/VisualCompact.css";
+@import "./styles/AnalysisManagementCompact.css";
+
+.ain-app.ain-shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  color: #183153;
+  font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+  background:
+    radial-gradient(
+      ellipse at top right,
+      #e4f3ff 0,
+      transparent 48%
+    ),
+    #edf5fc;
+  line-height: 1.5;
+}
+
+/* 背景装饰低透明度，不挡住工作模块 */
+.ain-background {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: #1688df;
+  opacity: .09;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.ain-signal-wave {
+  animation: ain-signal-breathe 12s ease-in-out infinite;
+}
+
+@keyframes ain-signal-breathe {
+  0%, 100% {
+    opacity: .25;
+  }
+
+  50% {
+    opacity: .85;
+  }
+}
+
+/* 全站公共按钮 */
+.ain-shell .ain-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 1px solid #cbddef;
+  border-radius: 8px;
+  background: #fff;
+  color: #244a70;
+  font-size: 13px;
+  line-height: 1.5;
+  text-decoration: none;
+  transition: background-color .2s, border-color .2s;
+}
+
+.ain-shell .ain-button:hover:not(:disabled) {
+  color: #087f95;
+  border-color: #22a1b6;
+  background: #f5fcff;
+}
+
+.ain-shell .ain-button.ain-primary {
+  color: #fff;
+  border-color: #008f9d;
+  background: #008f9d;
+}
+
+.ain-shell .ain-button.ain-primary:hover:not(:disabled) {
+  color: #fff;
+  background: #007b89;
+}
+
+.ain-shell .ain-button:disabled {
+  color: #94a6b8;
+  background: #f5f8fb;
+  border-color: #dce5ed;
+}
+
+.ain-page-tag {
+  display: inline-block;
+  color: #0d789d;
+  background: #e8f5ff;
+  border: 1px solid #d1eafb;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* 首页介绍 */
+.ain-home-page {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 64px 32px 56px;
+}
+
+.ain-home-hero {
+  max-width: 980px;
+  padding: 12px 0 42px;
+}
+
+.ain-home-hero .ain-home-title {
+  margin: 22px 0;
+  font-size: clamp(34px, 3.6vw, 54px);
+  line-height: 1.35;
+  letter-spacing: -1.3px;
+  color: #173465;
+}
+
+.ain-home-title em {
+  font-style: normal;
+  color: #077fa6;
+}
+
+.ain-home-lead {
+  max-width: 760px;
+  font-size: 17px;
+  color: #5e7592;
+  line-height: 1.9;
+}
+
+.ain-home-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+.ain-home-actions .ain-button {
+  padding: 12px 22px;
+  font-size: 14px;
+}
+
+.ain-home-status {
+  max-width: 780px;
+  margin-top: 18px !important;
+  color: #788ba1;
+  font-size: 12px;
+}
+
+/* 大模型交互介绍 */
+.ain-home-ai {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  gap: 32px;
+  padding: 28px;
+  border: 1px solid #cfe4f7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 32px #1b649808;
+}
+
+.ain-home-ai h2 {
+  margin: 12px 0 !important;
+  font-size: 24px;
+  color: #173465;
+}
+
+.ain-home-ai > div > p {
+  font-size: 14px;
+  color: #6b8099;
+}
+
+.ain-home-example {
+  padding: 20px;
+  background: #f0f7ff;
+  border-radius: 10px;
+  border: 1px solid #deebfb;
+}
+
+.ain-home-example > span {
+  color: #587ba3;
+  font-size: 11px;
+}
+
+.ain-home-example > p {
+  margin-top: 8px !important;
+  color: #234976 !important;
+  font-size: 16px !important;
+}
+
+.ain-home-tool-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  font-size: 12px;
+  color: #16889b;
+}
+
+.ain-home-tool-flow b {
+  font-weight: 400;
+  color: #7b9dbd;
+}
+
+.ain-home-example a,
+.ain-home-entry a {
+  color: #086dae;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.ain-home-example a:hover,
+.ain-home-entry a:hover {
+  text-decoration: underline;
+}
+
+/* 七步工作路线，只放在首页 */
+.ain-home-process {
+  margin-top: 38px;
+}
+
+.ain-home-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.ain-home-section-heading h2 {
+  font-size: 22px;
+  color: #173465;
+}
+
+.ain-home-section-heading p {
+  color: #7a8fa8;
+  font-size: 12px;
+}
+
+.ain-workflow {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ain-workflow li {
+  min-width: 0;
+  padding: 18px 14px;
+  border: 1px solid #d9e7f4;
+  border-radius: 10px;
+  background: #ffffffed;
+}
+
+.ain-workflow-number {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #087e9c;
+  background: #e5f5fa;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ain-workflow h3 {
+  margin: 12px 0 6px !important;
+  font-size: 14px;
+  color: #25486e;
+}
+
+.ain-workflow p {
+  color: #748ba3;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+/* 现存问题与预测分析两个入口 */
+.ain-home-entry-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 28px;
+}
+
+.ain-home-entry {
+  padding: 26px;
+  border: 1px solid #d5e5f4;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ain-home-entry h2 {
+  margin: 14px 0 10px !important;
+  font-size: 21px;
+  color: #173465;
+}
+
+.ain-home-entry p {
+  color: #6b819b;
+  font-size: 14px;
+  line-height: 1.9;
+  margin-bottom: 18px !important;
+}
+
+/* 本批预留页面 */
+.ain-pending-page {
+  max-width: 900px;
+  min-height: 60vh;
+  margin: 0 auto;
+  padding: 80px 28px;
+}
+
+.ain-pending-page h1 {
+  margin: 18px 0 !important;
+  font-size: 32px;
+}
+
+.ain-pending-page p {
+  color: #6b819b;
+  max-width: 660px;
+  margin-bottom: 26px !important;
+}
+
+/* 页脚 */
+.ain-shell .ain-footer {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid #d5e5f4;
+  padding: 18px 32px;
+  color: #7389a1;
+  font-size: 11px;
+}
+
+/* 小屏适配 */
+@media (max-width: 1100px) {
+  .ain-workflow {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .ain-home-page {
+    padding: 38px 20px;
+  }
+
+  .ain-home-ai,
+  .ain-home-entry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ain-home-ai {
+    padding: 22px;
+    gap: 22px;
+  }
+
+  .ain-home-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ain-workflow {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ain-shell .ain-footer {
+    flex-direction: column;
+    padding: 18px 20px;
+  }
+}
+
+@media print {
+  .ain-background {
+    display: none;
+  }
+}
